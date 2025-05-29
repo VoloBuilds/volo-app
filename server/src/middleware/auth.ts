@@ -2,18 +2,11 @@ import { MiddlewareHandler } from 'hono';
 import { verifyFirebaseToken } from '../lib/firebase-auth';
 import { createDbConnection } from '../lib/db';
 import { eq } from 'drizzle-orm';
-import { users } from '../schema/users';
+import { users, User } from '../schema/users';
 
 declare module 'hono' {
   interface ContextVariableMap {
-    user: {
-      id: string;
-      email: string;
-      display_name?: string | null;
-      photo_url?: string | null;
-      created_at: Date;
-      updated_at: Date;
-    };
+    user: User;
   }
 }
 
