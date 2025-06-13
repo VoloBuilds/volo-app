@@ -52,27 +52,8 @@ export const startEmbeddedPostgres = async (port: number = 5502): Promise<string
     embeddedInstance = null;
     
     if (error?.message && error.message.includes('postmaster.pid already exists')) {
-      console.log('\n🚨 PostgreSQL Database Conflict Detected\n');
-      console.log('❌ Another PostgreSQL instance is already running with the same data directory.');
-      console.log('   This typically happens when you try to run multiple volo-app instances');
-      console.log('   from the same folder.\n');
-      console.log('💡 Solutions:');
-      console.log('   1. Stop the other volo-app instance first (Ctrl+C)');
-      console.log('   2. Copy this project to a different folder if you need multiple instances');
-      console.log('   3. Use different PROJECT folders for different volo-apps\n');
-      console.log('📁 Current project folder:', path.resolve(__dirname, '../../..'));
-      console.log('🔍 PostgreSQL data directory:', dataDir);
-      console.log('\n🔄 If you want to run multiple volo-apps simultaneously:');
-      console.log('   • Each should be in its own separate folder');
-      console.log('   • The dynamic port system will handle port conflicts automatically');
-      console.log('   • Each will get its own PostgreSQL database instance\n');
-      
-      // Provide additional context about the current setup
-      console.log('🔍 Troubleshooting:');
-      console.log('   • Check if another terminal has this project running');
-      console.log('   • Look for other `npm run dev` or `pnpm run dev` processes');
-      console.log('   • If you stopped a previous instance abruptly, restart your terminal\n');
-      
+      console.log('⚠️ PostgreSQL instance already running in this directory');
+      console.log('💡 Either stop the other instance or use a different project folder');
       throw error;
     } else {
       console.error('❌ Failed to start embedded PostgreSQL:', error?.message || error);

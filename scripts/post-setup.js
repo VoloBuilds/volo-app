@@ -78,30 +78,52 @@ function detectConfiguration() {
  * Setup local embedded PostgreSQL database with dynamic dependency installation
  */
 async function setupLocalDatabase() {
-  // Add embedded-postgres dependency dynamically
-  console.log('📦 Installing embedded PostgreSQL dependency...');
-  
-  const packageJsonPath = join(projectRoot, 'package.json');
-  const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
-  
-  // Add embedded-postgres to devDependencies if not already present
-  if (!packageJson.devDependencies?.['embedded-postgres']) {
-    packageJson.devDependencies = packageJson.devDependencies || {};
-    packageJson.devDependencies['embedded-postgres'] = '17.5.0-beta.15';
+  try {
+    // Add embedded-postgres dependency dynamically
+    console.log('📦 Installing embedded PostgreSQL dependency...');
     
-    writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
-    console.log('✅ Added embedded-postgres dependency');
+    const packageJsonPath = join(projectRoot, 'package.json');
+    const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
     
-    // Install the new dependency
-    console.log('📦 Running pnpm install for embedded-postgres...');
-    execSync('pnpm install', { cwd: projectRoot, stdio: 'inherit' });
-    console.log('✅ Embedded-postgres installed');
+    // Add embedded-postgres to devDependencies if not already present
+    if (!packageJson.devDependencies?.['embedded-postgres']) {
+      packageJson.devDependencies = packageJson.devDependencies || {};
+      packageJson.devDependencies['embedded-postgres'] = '17.5.0-beta.15';
+      
+      writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
+      console.log('✅ Added embedded-postgres dependency');
+      
+      // Install the new dependency
+      console.log('📦 Running pnpm install for embedded-postgres...');
+      execSync('pnpm install', { cwd: projectRoot, stdio: 'inherit' });
+      console.log('✅ Embedded-postgres installed');
+    }
+    
+    // Now dynamically import and run the embedded postgres setup
+    console.log('🗄️ Setting up embedded PostgreSQL...');
+    const { setupEmbeddedPostgres } = await import('./post-setup-embedded-pg.js');
+    return await setupEmbeddedPostgres();
+  } catch (error) {
+    // Handle embedded PostgreSQL setup failures
+    console.log('');
+    console.log('❌ Local database setup failed');
+    console.log('');
+    console.log('The embedded PostgreSQL database could not be started on your system.');
+    console.log('');
+    console.log('Next steps:');
+    console.log('');
+    console.log('1. Use a cloud database instead:');
+    console.log('   • Run create-volo-app again with the --database flag');
+    console.log('   • Choose a cloud provider like Neon or Supabase');
+    console.log('');
+    console.log('2. Or install PostgreSQL locally:');
+    console.log('   • macOS: brew install postgresql@15 && brew services start postgresql@15');
+    console.log('   • Then run create-volo-app again with "Other PostgreSQL" option');
+    console.log('');
+    
+    // Re-throw the error so the outer catch can handle the exit properly
+    throw new Error('Database setup failed');
   }
-  
-  // Now dynamically import and run the embedded postgres setup
-  console.log('🗄️ Setting up embedded PostgreSQL...');
-  const { setupEmbeddedPostgres } = await import('./post-setup-embedded-pg.js');
-  return await setupEmbeddedPostgres();
 }
 
 /**
@@ -247,6 +269,13 @@ async function runPostSetup() {
     }
 
   } catch (error) {
+    // If it's a database setup failure, we already showed the detailed error message
+    if (error.message === 'Database setup failed') {
+      // Exit without showing additional confusing messages
+      process.exit(1);
+    }
+    
+    // For other errors, show the generic error message
     console.error('❌ Post-setup failed:', error.message);
     console.log('');
     console.log('💡 You can complete setup manually:');

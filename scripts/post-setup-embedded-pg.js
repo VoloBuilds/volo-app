@@ -146,11 +146,47 @@ export async function setupEmbeddedPostgres() {
     return connectionString;
 
   } catch (error) {
+    console.error('❌ Failed to setup embedded PostgreSQL:', error);
+    
     if (error.message?.includes('postmaster.pid already exists')) {
       console.log('⚠️ PostgreSQL instance already running, continuing...');
       return `postgresql://postgres:password@localhost:${postgresPort}/postgres`;
     }
-    throw error;
+    
+    // Provide Mac-specific troubleshooting
+    if (process.platform === 'darwin') {
+      console.log('');
+      console.log('🍎 Mac Troubleshooting:');
+      
+      if (error.message?.includes('init script exited with code null') || error.message?.includes('initdb')) {
+        console.log('  ❌ PostgreSQL initialization failed on Apple Silicon Mac');
+        console.log('  🔧 Try these solutions in order:');
+        console.log('');
+        console.log('  1. Install Rosetta 2 (required for Intel emulation):');
+        console.log('     softwareupdate --install-rosetta');
+        console.log('');
+        console.log('  2. Install Xcode Command Line Tools:');
+        console.log('     xcode-select --install');
+        console.log('');
+        console.log('  3. Clean up and retry:');
+        console.log(`     rm -rf ${join(dataDir, 'postgres')}`);
+        console.log('     Then run the setup again');
+        console.log('');
+        console.log('  4. Alternative: Use Docker PostgreSQL instead:');
+        console.log('     docker run -d --name volo-postgres -p 5433:5432 \\');
+        console.log('       -e POSTGRES_PASSWORD=password postgres:15');
+      } else {
+        console.log('  1. If you have Apple Silicon (M1/M2/M3), try installing Rosetta 2:');
+        console.log('     softwareupdate --install-rosetta');
+        console.log('  2. Ensure you have required system tools:');
+        console.log('     xcode-select --install');
+        console.log('  3. Check available disk space and permissions in:');
+        console.log(`     ${join(dataDir, 'postgres')}`);
+        console.log('  4. Try restarting the terminal and running again');
+      }
+    }
+    
+    throw new Error(`Embedded PostgreSQL setup failed: ${error.message || 'Unknown error'}`);
   } finally {
     if (client) await client.end();
     if (embeddedPg) await embeddedPg.stop();
