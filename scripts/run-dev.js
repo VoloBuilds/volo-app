@@ -315,7 +315,9 @@ async function startServices() {
     ], {
       stdio: ['pipe', 'pipe', 'pipe'],  // Capture stdout/stderr initially
       shell: true,
-      cwd: path.join(__dirname, '..')
+      cwd: path.join(__dirname, '..'),
+      // Create a new process group on Unix systems for proper cleanup
+      detached: process.platform !== 'win32'
     });
 
     let startupComplete = false;
@@ -427,24 +429,41 @@ async function startServices() {
       ? ['SIGINT', 'SIGTERM', 'SIGBREAK']
       : ['SIGINT', 'SIGTERM'];
     
+    const killChildProcesses = () => {
+      if (child && !child.killed) {
+        if (process.platform === 'win32') {
+          // On Windows, kill the child process directly
+          child.kill('SIGKILL');
+        } else {
+          // On Unix systems, kill the entire process group
+          try {
+            // Kill the process group (negative PID)
+            process.kill(-child.pid, 'SIGKILL');
+          } catch (error) {
+            // Fallback to killing just the child process
+            child.kill('SIGKILL');
+          }
+        }
+      }
+    };
+    
     signals.forEach(signal => {
       process.on(signal, () => {
         console.log(`\n🛑 Shutting down services...`);
         cleanup();
-        // Force kill child processes
-        if (child && !child.killed) {
-          child.kill('SIGKILL');
-        }
+        killChildProcesses();
         setTimeout(() => process.exit(0), 1000);
       });
     });
 
-    child.on('exit', (code) => {
+    child.on('exit', (code, signal) => {
       cleanup();
-      if (code !== 0) {
+      if (code !== 0 && signal !== 'SIGKILL' && signal !== 'SIGTERM') {
         console.log(`\n❌ Services stopped with error code ${code}`);
+      } else if (signal) {
+        console.log(`\n✅ Services stopped by signal ${signal}`);
       }
-      process.exit(code);
+      process.exit(code || 0);
     });
 
     child.on('error', (error) => {
