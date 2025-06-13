@@ -431,7 +431,11 @@ async function startServices() {
       process.on(signal, () => {
         console.log(`\n🛑 Shutting down services...`);
         cleanup();
-        process.exit(0);
+        // Force kill child processes
+        if (child && !child.killed) {
+          child.kill('SIGKILL');
+        }
+        setTimeout(() => process.exit(0), 1000);
       });
     });
 
