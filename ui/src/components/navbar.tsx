@@ -6,8 +6,19 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuth } from "@/lib/auth-context";
 import { ModeToggle } from "@/components/mode-toggle";
 
-export function Navbar() {
-  const { user } = useAuth();
+interface NavbarProps {
+  onSignInClick?: () => void;
+}
+
+export function Navbar({ onSignInClick }: NavbarProps = {}) {
+  const { user, logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();  // Set isLoggedOut flag first
+    signOut(auth);  // Then sign out from Firebase
+  };
+
+  const isAnonymous = user?.isAnonymous ?? false;
 
   return (
     <header className="sticky top-0 z-50 flex items-center h-12 px-2 border-b shrink-0 bg-background">
@@ -18,20 +29,30 @@ export function Navbar() {
         <span className="font-semibold ml-3">My App</span>
       </div>
       <div className="flex items-center gap-3 ml-auto">
-        {user && (
+        {user && !isAnonymous && (
           <span className="text-sm">
             Welcome, {user.displayName || user.email}
           </span>
         )}
         <ModeToggle />
         {user && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => signOut(auth)}
-          >
-            Sign Out
-          </Button>
+          isAnonymous ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onSignInClick}
+            >
+              Sign In
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleLogout}
+            >
+              Sign Out
+            </Button>
+          )
         )}
       </div>
     </header>

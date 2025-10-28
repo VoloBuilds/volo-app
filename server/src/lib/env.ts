@@ -72,6 +72,14 @@ export function getFirebaseProjectId(): string {
 }
 
 /**
+ * Check if anonymous users are allowed
+ * Defaults to true if not explicitly set to 'false'
+ */
+export function getAllowAnonymousUsers(): boolean {
+  return getEnv('ALLOW_ANONYMOUS_USERS') !== 'false';
+}
+
+/**
  * For Node.js environments - get process.env
  */
 export function getNodeEnv() {

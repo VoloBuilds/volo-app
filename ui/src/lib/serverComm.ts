@@ -3,11 +3,20 @@ import { app } from './firebase';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787';
 
-class APIError extends Error {
-  constructor(public status: number, message: string) {
-    super(message);
-    this.name = 'APIError';
-  }
+// Functional error type instead of class
+interface APIError extends Error {
+  status: number;
+  code?: string;
+  user_id?: string;
+}
+
+function createAPIError(status: number, message: string, code?: string, user_id?: string): APIError {
+  const error = new Error(message) as APIError;
+  error.name = 'APIError';
+  error.status = status;
+  error.code = code;
+  error.user_id = user_id;
+  return error;
 }
 
 async function getAuthToken(): Promise<string | null> {
@@ -36,9 +45,13 @@ async function fetchWithAuth(
   });
 
   if (!response.ok) {
-    throw new APIError(
+    const errorData = await response.json().catch(() => ({ error: response.statusText }));
+    
+    throw createAPIError(
       response.status,
-      `API request failed: ${response.statusText}`
+      errorData.error || errorData.message || `API request failed: ${response.statusText}`,
+      errorData.code,
+      errorData.user_id
     );
   }
 
@@ -46,7 +59,17 @@ async function fetchWithAuth(
 }
 
 // API endpoints
-export async function getCurrentUser() {
+export async function getCurrentUser(): Promise<{
+  user: {
+    id: string;
+    email: string | null;
+    display_name: string | null;
+    photo_url: string | null;
+    created_at: string;
+    updated_at: string;
+  };
+  message: string;
+}> {
   const response = await fetchWithAuth('/api/v1/protected/me');
   return response.json();
 }
