@@ -1,6 +1,5 @@
 import { getAuth } from 'firebase/auth';
 import { app } from './firebase';
-import { type ApiResponse } from './types/api';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787';
 
@@ -60,7 +59,7 @@ async function fetchWithAuth(
 }
 
 // API endpoints
-export async function getCurrentUser(): Promise<ApiResponse<{
+export async function getCurrentUser(): Promise<{
   user: {
     id: string;
     email: string | null;
@@ -69,7 +68,8 @@ export async function getCurrentUser(): Promise<ApiResponse<{
     created_at: string;
     updated_at: string;
   };
-}>> {
+  message: string;
+}> {
   const response = await fetchWithAuth('/api/v1/protected/me');
   return response.json();
 }

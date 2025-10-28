@@ -5,7 +5,6 @@ import { logger } from 'hono/logger';
 import { authMiddleware } from './middleware/auth';
 import { getDatabase, testDatabaseConnection } from './lib/db';
 import { setEnvContext, clearEnvContext, getDatabaseUrl } from './lib/env';
-import { type ApiResponse } from './lib/types';
 import * as schema from './schema/users';
 
 type Env = {
@@ -92,26 +91,14 @@ protectedRoutes.use('*', authMiddleware);
 
 protectedRoutes.get('/me', (c) => {
   const user = c.get('user');
-  return c.json<ApiResponse<{
+  return c.json({
     user: {
-      id: string;
-      email: string | null;
-      display_name: string | null;
-      photo_url: string | null;
-      created_at: Date;
-      updated_at: Date;
-    };
-  }>>({
-    success: true,
-    data: {
-      user: {
-        id: user.id,
-        email: user.email,
-        display_name: user.display_name,
-        photo_url: user.photo_url,
-        created_at: user.created_at,
-        updated_at: user.updated_at,
-      },
+      id: user.id,
+      email: user.email,
+      display_name: user.display_name,
+      photo_url: user.photo_url,
+      created_at: user.created_at,
+      updated_at: user.updated_at,
     },
     message: 'You are authenticated!',
   });

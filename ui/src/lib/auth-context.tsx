@@ -143,7 +143,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setProfileLoading(true)
       const response = await getCurrentUser()
-      setUserProfile(response.data?.user ?? null)
+      setUserProfile(response.user)
     } catch (error) {
       // Only log profile fetch errors if they're not authentication errors
       // (which can happen during logout when old listeners are still active)
