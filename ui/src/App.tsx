@@ -23,11 +23,16 @@ function AppContent() {
     </div>;
   }
 
+  // Determine if login form should be shown based on anonymous user setting
+  const shouldShowLogin = import.meta.env.VITE_ALLOW_ANONYMOUS_USERS === 'false' 
+    ? !user  // If anonymous disabled, require any user
+    : (!user || (user.isAnonymous && !user.email));  // If anonymous enabled, require authenticated user
+
   return (
     <SidebarProvider>
       <div className="flex flex-col w-full min-h-screen bg-background">
         <Navbar />
-        {(!user || (user.isAnonymous && !user.email)) ? (
+        {shouldShowLogin ? (
           <main className="flex flex-col items-center justify-center flex-1 p-4">
             <LoginForm />
           </main>

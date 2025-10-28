@@ -3,7 +3,7 @@ import { verifyFirebaseToken } from '../lib/firebase-auth';
 import { getDatabase } from '../lib/db';
 import { eq } from 'drizzle-orm';
 import { User, users } from '../schema/users';
-import { getFirebaseProjectId, getDatabaseUrl } from '../lib/env';
+import { getFirebaseProjectId, getDatabaseUrl, getAllowAnonymousUsers } from '../lib/env';
 
 declare module 'hono' {
   interface ContextVariableMap {
@@ -21,6 +21,14 @@ export const authMiddleware: MiddlewareHandler = async (c, next) => {
     const token = authHeader.split('Bearer ')[1];
     const firebaseProjectId = getFirebaseProjectId();
     const firebaseUser = await verifyFirebaseToken(token, firebaseProjectId);
+    
+    // Check if anonymous users are allowed
+    const allowAnonymous = getAllowAnonymousUsers();
+    const isAnonymousUser = !firebaseUser.email;
+    
+    if (!allowAnonymous && isAnonymousUser) {
+      return c.json({ error: 'Anonymous users are not allowed. Please sign in.' }, 403);
+    }
     
     const firebaseUserId = firebaseUser.id;
     const email = firebaseUser.email || null;

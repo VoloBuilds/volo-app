@@ -62,8 +62,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setLoading(false)
           
           if (!user) {
-            // Only create anonymous user if we haven't explicitly logged out
-            if (!isLoggedOut) {
+            // Only create anonymous user if explicitly allowed and not logged out
+            if (!isLoggedOut && import.meta.env.VITE_ALLOW_ANONYMOUS_USERS === 'true') {
               try {
                 await signInAnonymously(auth);
               } catch (error) {
@@ -74,18 +74,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 }
               }
             } else {
-              // User has logged out, don't create anonymous user
+              // Anonymous users not allowed or user logged out
               if (isActive) {
                 setUserProfile(null);
                 setProfileLoading(false);
               }
               
-              // Reset logout state after a delay to allow for future anonymous user creation
-              setTimeout(() => {
-                if (isActive) {
-                  setIsLoggedOut(false);
-                }
-              }, LOGOUT_RESET_DELAY_MS);
+              // If logout occurred, reset state after delay
+              if (isLoggedOut) {
+                setTimeout(() => {
+                  if (isActive) {
+                    setIsLoggedOut(false);
+                  }
+                }, LOGOUT_RESET_DELAY_MS);
+              }
             }
           } else {
             // Reset logout state when user successfully logs in
