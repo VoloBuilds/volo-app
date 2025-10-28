@@ -88,13 +88,14 @@ export function LoginForm() {
     try {
       const currentUser = auth.currentUser;
       
-      if (activeTab === "register" && currentUser && currentUser.isAnonymous) {
-        // Register tab: Try to link (upgrade anonymous user, preserves payment data)
+      // If user is anonymous, always try to upgrade/link first (regardless of tab)
+      if (currentUser && currentUser.isAnonymous) {
+        // Try to link (upgrade anonymous user, preserves data)
         try {
           const provider = new GoogleAuthProvider();
           const result = await linkWithPopup(currentUser, provider);
           
-          // Success! Anonymous user upgraded, payment preserved
+          // Success! Anonymous user upgraded, data preserved
           await result.user.reload();
           await result.user.getIdToken(true); // Force token refresh
           forceRefresh();
@@ -114,7 +115,7 @@ export function LoginForm() {
           }
         }
       } else {
-        // Sign in tab OR non-anonymous users: Regular sign-in
+        // Non-anonymous users: Regular sign-in
         await signInWithPopup(auth, googleProvider);
       }
     } catch (err: any) {
