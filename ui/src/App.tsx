@@ -14,17 +14,20 @@ import {
 } from "@/components/ui/sidebar";
 
 function AppContent() {
-  const { user, loading } = useAuth();
+  const { user, loading, profileLoading } = useAuth();
 
-  if (loading) {
-    return <div className="flex items-center justify-center min-h-screen"></div>;
+  // Show loading while authentication or profile is loading
+  if (loading || profileLoading) {
+    return <div className="flex items-center justify-center min-h-screen">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+    </div>;
   }
 
   return (
     <SidebarProvider>
       <div className="flex flex-col w-full min-h-screen bg-background">
         <Navbar />
-        {!user ? (
+        {(!user || (user.isAnonymous && !user.email)) ? (
           <main className="flex flex-col items-center justify-center flex-1 p-4">
             <LoginForm />
           </main>

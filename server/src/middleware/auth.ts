@@ -15,40 +15,50 @@ export const authMiddleware: MiddlewareHandler = async (c, next) => {
   try {
     const authHeader = c.req.header('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return c.json({ error: 'Unauthorized' }, 401);
+      return c.json({ error: 'Authentication required' }, 401);
     }
 
     const token = authHeader.split('Bearer ')[1];
     const firebaseProjectId = getFirebaseProjectId();
     const firebaseUser = await verifyFirebaseToken(token, firebaseProjectId);
+    
+    const firebaseUserId = firebaseUser.id;
+    const email = firebaseUser.email || null;
 
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
 
-    // Upsert: insert if not exists, do nothing if exists
+    // Upsert: insert if not exists, update email if exists and email changed
     await db.insert(users)
       .values({
-        id: firebaseUser.id,
-        email: firebaseUser.email!,
+        id: firebaseUserId,
+        email: email,
         display_name: null,
         photo_url: null,
       })
-      .onConflictDoNothing();
+      .onConflictDoUpdate({
+        target: users.id,
+        set: {
+          email: email,
+          updated_at: new Date(),
+        },
+      });
 
-    // Get the user (either just created or already existing)
+    // Get the user from database
     const [user] = await db.select()
       .from(users)
-      .where(eq(users.id, firebaseUser.id))
+      .where(eq(users.id, firebaseUserId))
       .limit(1);
 
     if (!user) {
-      throw new Error('Failed to create or retrieve user');
+      console.error('User not found after insert attempt for ID:', firebaseUserId);
+      return c.json({ error: 'User creation failed' }, 500);
     }
 
     c.set('user', user);
     await next();
   } catch (error) {
-    console.error('Auth error:', error);
-    return c.json({ error: 'Unauthorized' }, 401);
+    console.error('Authentication error:', error);
+    return c.json({ error: 'Authentication failed' }, 401);
   }
 }; 

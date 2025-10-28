@@ -7,7 +7,12 @@ import { useAuth } from "@/lib/auth-context";
 import { ModeToggle } from "@/components/mode-toggle";
 
 export function Navbar() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();  // Set isLoggedOut flag first
+    signOut(auth);  // Then sign out from Firebase
+  };
 
   return (
     <header className="sticky top-0 z-50 flex items-center h-12 px-2 border-b shrink-0 bg-background">
@@ -28,7 +33,7 @@ export function Navbar() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => signOut(auth)}
+            onClick={handleLogout}
           >
             Sign Out
           </Button>
