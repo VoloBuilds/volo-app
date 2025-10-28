@@ -62,8 +62,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setLoading(false)
           
           if (!user) {
-            // Only create anonymous user if explicitly allowed and not logged out
-            if (!isLoggedOut && import.meta.env.VITE_ALLOW_ANONYMOUS_USERS === 'true') {
+            // Check if anonymous users are allowed (defaults to true if not set)
+            const allowAnonymous = import.meta.env.VITE_ALLOW_ANONYMOUS_USERS !== 'false';
+            
+            // Create anonymous user if allowed (and not explicitly logged out)
+            if (!isLoggedOut && allowAnonymous) {
               try {
                 await signInAnonymously(auth);
               } catch (error) {

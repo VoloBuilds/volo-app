@@ -23,10 +23,19 @@ function AppContent() {
     </div>;
   }
 
-  // Determine if login form should be shown based on anonymous user setting
-  const shouldShowLogin = import.meta.env.VITE_ALLOW_ANONYMOUS_USERS === 'false' 
-    ? !user  // If anonymous disabled, require any user
-    : (!user || (user.isAnonymous && !user.email));  // If anonymous enabled, require authenticated user
+  // Determine if login form should be shown
+  const allowAnonymous = import.meta.env.VITE_ALLOW_ANONYMOUS_USERS !== 'false';
+  
+  let shouldShowLogin: boolean;
+  if (allowAnonymous) {
+    // Anonymous users are allowed - only show login if there's no user at all
+    // (anonymous users without email can use the app)
+    shouldShowLogin = !user;
+  } else {
+    // Anonymous users NOT allowed - show login if no user OR if user is anonymous
+    // (force authentication with real credentials)
+    shouldShowLogin = !user || user.isAnonymous;
+  }
 
   return (
     <SidebarProvider>
