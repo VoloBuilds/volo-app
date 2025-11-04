@@ -324,6 +324,7 @@ async function startServices() {
     let startupTimeout;
     let servicesStarted = new Set();
     let capturedOutput = '';
+    let outputPipesCreated = false;
 
     // Set a timeout for startup detection
     const timeoutDuration = config.useLocalFirebase ? 15000 : 10000; // Shorter timeout if no Firebase emulator
@@ -339,9 +340,12 @@ async function startServices() {
         console.log('✅ All services are starting up...\n');
         showServiceInfo(availablePorts, cliArgs.useWrangler, config);
         startupComplete = true;
-        // Switch to live output
-        child.stdout.pipe(process.stdout);
-        child.stderr.pipe(process.stderr);
+        // Switch to live output (only once)
+        if (!outputPipesCreated) {
+          child.stdout.pipe(process.stdout);
+          child.stderr.pipe(process.stderr);
+          outputPipesCreated = true;
+        }
       }
     }, timeoutDuration);
 
@@ -374,24 +378,25 @@ async function startServices() {
         
         const completionCondition = databaseReady && (config.useLocalFirebase ? firebaseReady : basicServicesReady);
           
-        if (completionCondition) {
+        if (completionCondition && !startupComplete) {
           clearTimeout(startupTimeout);
-          if (!startupComplete) {
-            // Wait a moment for output to settle
-            setTimeout(() => {
-              clearInterval(spinnerInterval);
-              process.stdout.write('\r' + ' '.repeat(50) + '\r'); // Clear spinner line
-              
-              // Show all the captured startup output first
-              process.stdout.write(capturedOutput);
-              
-              console.log('✅ All services started successfully!\n');
-              showServiceInfo(availablePorts, cliArgs.useWrangler, config);
-              startupComplete = true;
-              // Switch to live output for ongoing logs
-              child.stdout.pipe(process.stdout);
-              child.stderr.pipe(process.stderr);
-            }, 1000);
+          startupComplete = true;
+          
+          // Clear spinner and show output immediately
+          clearInterval(spinnerInterval);
+          process.stdout.write('\r' + ' '.repeat(50) + '\r'); // Clear spinner line
+          
+          // Show all the captured startup output first
+          process.stdout.write(capturedOutput);
+          
+          console.log('✅ All services started successfully!\n');
+          showServiceInfo(availablePorts, cliArgs.useWrangler, config);
+          
+          // Switch to live output for ongoing logs (only once)
+          if (!outputPipesCreated) {
+            child.stdout.pipe(process.stdout);
+            child.stderr.pipe(process.stderr);
+            outputPipesCreated = true;
           }
         }
       }
