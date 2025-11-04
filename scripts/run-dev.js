@@ -315,13 +315,16 @@ async function startServices() {
     ], {
       stdio: ['pipe', 'pipe', 'pipe'],  // Capture stdout/stderr initially
       shell: true,
-      cwd: path.join(__dirname, '..')
+      cwd: path.join(__dirname, '..'),
+      // Create a new process group on Unix systems for proper cleanup
+      detached: process.platform !== 'win32'
     });
 
     let startupComplete = false;
     let startupTimeout;
     let servicesStarted = new Set();
     let capturedOutput = '';
+    let outputPipesCreated = false;
 
     // Set a timeout for startup detection
     const timeoutDuration = config.useLocalFirebase ? 15000 : 10000; // Shorter timeout if no Firebase emulator
@@ -337,9 +340,12 @@ async function startServices() {
         console.log('✅ All services are starting up...\n');
         showServiceInfo(availablePorts, cliArgs.useWrangler, config);
         startupComplete = true;
-        // Switch to live output
-        child.stdout.pipe(process.stdout);
-        child.stderr.pipe(process.stderr);
+        // Switch to live output (only once)
+        if (!outputPipesCreated) {
+          child.stdout.pipe(process.stdout);
+          child.stderr.pipe(process.stderr);
+          outputPipesCreated = true;
+        }
       }
     }, timeoutDuration);
 
@@ -372,24 +378,25 @@ async function startServices() {
         
         const completionCondition = databaseReady && (config.useLocalFirebase ? firebaseReady : basicServicesReady);
           
-        if (completionCondition) {
+        if (completionCondition && !startupComplete) {
           clearTimeout(startupTimeout);
-          if (!startupComplete) {
-            // Wait a moment for output to settle
-            setTimeout(() => {
-              clearInterval(spinnerInterval);
-              process.stdout.write('\r' + ' '.repeat(50) + '\r'); // Clear spinner line
-              
-              // Show all the captured startup output first
-              process.stdout.write(capturedOutput);
-              
-              console.log('✅ All services started successfully!\n');
-              showServiceInfo(availablePorts, cliArgs.useWrangler, config);
-              startupComplete = true;
-              // Switch to live output for ongoing logs
-              child.stdout.pipe(process.stdout);
-              child.stderr.pipe(process.stderr);
-            }, 1000);
+          startupComplete = true;
+          
+          // Clear spinner and show output immediately
+          clearInterval(spinnerInterval);
+          process.stdout.write('\r' + ' '.repeat(50) + '\r'); // Clear spinner line
+          
+          // Show all the captured startup output first
+          process.stdout.write(capturedOutput);
+          
+          console.log('✅ All services started successfully!\n');
+          showServiceInfo(availablePorts, cliArgs.useWrangler, config);
+          
+          // Switch to live output for ongoing logs (only once)
+          if (!outputPipesCreated) {
+            child.stdout.pipe(process.stdout);
+            child.stderr.pipe(process.stderr);
+            outputPipesCreated = true;
           }
         }
       }
@@ -427,24 +434,41 @@ async function startServices() {
       ? ['SIGINT', 'SIGTERM', 'SIGBREAK']
       : ['SIGINT', 'SIGTERM'];
     
+    const killChildProcesses = () => {
+      if (child && !child.killed) {
+        if (process.platform === 'win32') {
+          // On Windows, kill the child process directly
+          child.kill('SIGKILL');
+        } else {
+          // On Unix systems, kill the entire process group
+          try {
+            // Kill the process group (negative PID)
+            process.kill(-child.pid, 'SIGKILL');
+          } catch (error) {
+            // Fallback to killing just the child process
+            child.kill('SIGKILL');
+          }
+        }
+      }
+    };
+    
     signals.forEach(signal => {
       process.on(signal, () => {
         console.log(`\n🛑 Shutting down services...`);
         cleanup();
-        // Force kill child processes
-        if (child && !child.killed) {
-          child.kill('SIGKILL');
-        }
+        killChildProcesses();
         setTimeout(() => process.exit(0), 1000);
       });
     });
 
-    child.on('exit', (code) => {
+    child.on('exit', (code, signal) => {
       cleanup();
-      if (code !== 0) {
+      if (code !== 0 && signal !== 'SIGKILL' && signal !== 'SIGTERM') {
         console.log(`\n❌ Services stopped with error code ${code}`);
+      } else if (signal) {
+        console.log(`\n✅ Services stopped by signal ${signal}`);
       }
-      process.exit(code);
+      process.exit(code || 0);
     });
 
     child.on('error', (error) => {

@@ -92,7 +92,14 @@ protectedRoutes.use('*', authMiddleware);
 protectedRoutes.get('/me', (c) => {
   const user = c.get('user');
   return c.json({
-    user,
+    user: {
+      id: user.id,
+      email: user.email,
+      display_name: user.display_name,
+      photo_url: user.photo_url,
+      created_at: user.created_at,
+      updated_at: user.updated_at,
+    },
     message: 'You are authenticated!',
   });
 });
