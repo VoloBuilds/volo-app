@@ -21,7 +21,7 @@ const createConnection = async (connectionString: string): Promise<DatabaseConne
 
   const client = postgres(connectionString, {
     prepare: false,
-    max: 1,
+    max: parseInt(process.env.DB_POOL_MAX ?? '1', 10),
     idle_timeout: 20,
     max_lifetime: 60 * 30,
   });

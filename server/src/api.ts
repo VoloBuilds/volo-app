@@ -4,7 +4,8 @@ import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { authMiddleware } from './middleware/auth';
 import { getDatabase, testDatabaseConnection } from './lib/db';
-import { setEnvContext, clearEnvContext, getDatabaseUrl } from './lib/env';
+import { setEnvContext, clearEnvContext, getDatabaseUrl, getEnv } from './lib/env';
+import { eq } from 'drizzle-orm';
 import * as schema from './schema/users';
 
 type Env = {
@@ -47,15 +48,19 @@ api.get('/hello', (c) => {
   });
 });
 
-// Database test route - public for testing
+// Database test route - development only
 api.get('/db-test', async (c) => {
+  if (getEnv('NODE_ENV') === 'production') {
+    return c.notFound();
+  }
+
   try {
     // Use external DB URL if available, otherwise use local PostgreSQL database server
     // Note: In development, the port is dynamically allocated by port-manager.js
     const defaultLocalConnection = process.env.DATABASE_URL || 'postgresql://postgres:password@localhost:5502/postgres';
     const dbUrl = getDatabaseUrl() || defaultLocalConnection;
     
-    const db = await getDatabase(dbUrl);
+    await getDatabase(dbUrl);
     const isHealthy = await testDatabaseConnection();
     
     if (!isHealthy) {
@@ -65,13 +70,9 @@ api.get('/db-test', async (c) => {
       }, 500);
     }
     
-    const result = await db.select().from(schema.users).limit(5);
-    
     return c.json({
       message: 'Database connection successful!',
-      users: result,
-      connectionHealthy: isHealthy,
-      usingLocalDatabase: !getDatabaseUrl(),
+      connectionHealthy: true,
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
@@ -102,6 +103,21 @@ protectedRoutes.get('/me', (c) => {
     },
     message: 'You are authenticated!',
   });
+});
+
+protectedRoutes.post('/me', async (c) => {
+  const user = c.get('user');
+  const { display_name } = await c.req.json<{ display_name: string }>();
+
+  const databaseUrl = getDatabaseUrl();
+  const db = await getDatabase(databaseUrl);
+
+  await db
+    .update(schema.users)
+    .set({ display_name, updated_at: new Date() })
+    .where(eq(schema.users.id, user.id));
+
+  return c.json({ success: true });
 });
 
 // Mount the protected routes under /protected

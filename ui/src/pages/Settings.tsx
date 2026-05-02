@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth-context';
+import { updateProfile } from '@/lib/serverComm';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,10 +14,26 @@ export function Settings() {
     displayName: user?.displayName || '',
     email: user?.email || '',
   });
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
-  const handleSave = () => {
-    // TODO: Implement save functionality
-    console.log('Saving settings...', { profile });
+  useEffect(() => {
+    setProfile({
+      displayName: user?.displayName || '',
+      email: user?.email || '',
+    });
+  }, [user?.uid]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    setSaveError(null);
+    try {
+      await updateProfile(profile.displayName);
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'Failed to save profile');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -68,9 +85,12 @@ export function Settings() {
         </Card>
 
         {/* Save Button */}
-        <div className="flex justify-end">
-          <Button onClick={handleSave} className="w-full md:w-auto">
-            Save Changes
+        <div className="flex flex-col items-end gap-2">
+          {saveError && (
+            <p className="text-sm text-destructive">{saveError}</p>
+          )}
+          <Button onClick={handleSave} disabled={saving} className="w-full md:w-auto">
+            {saving ? 'Saving...' : 'Save Changes'}
           </Button>
         </div>
       </div>

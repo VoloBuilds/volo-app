@@ -74,6 +74,17 @@ export async function getCurrentUser(): Promise<{
   return response.json();
 }
 
+export async function updateProfile(displayName: string): Promise<{ success: true }> {
+  const response = await fetchWithAuth('/api/v1/protected/me', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ display_name: displayName }),
+  });
+  return response.json();
+}
+
 // Example of how to add more API endpoints:
 // export async function createChat(data: CreateChatData) {
 //   const response = await fetchWithAuth('/api/v1/protected/chats', {
@@ -88,5 +99,6 @@ export async function getCurrentUser(): Promise<{
 
 export const api = {
   getCurrentUser,
+  updateProfile,
   // Add other API endpoints here
 }; 

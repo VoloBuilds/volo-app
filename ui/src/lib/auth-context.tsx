@@ -47,92 +47,70 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Create a flag to track if this effect is still active
     let isActive = true;
 
-    const initializeAuth = async () => {
-      try {
-        setLoading(true);
+    setLoading(true);
 
-        // Set up Firebase auth listener
-        const unsubscribe = onAuthStateChanged(auth, async (user) => {
-          // If this effect has been cleaned up, ignore the callback
-          if (!isActive) {
-            return;
-          }
-          
-          setUser(user)
-          setLoading(false)
-          
-          if (!user) {
-            // Check if anonymous users are allowed (defaults to true if not set)
-            const allowAnonymous = import.meta.env.VITE_ALLOW_ANONYMOUS_USERS !== 'false';
-            
-            // Create anonymous user if allowed (and not explicitly logged out)
-            if (!isLoggedOut && allowAnonymous) {
-              try {
-                await signInAnonymously(auth);
-              } catch (error) {
-                console.error('Failed to create anonymous user:', error);
-                if (isActive) {
-                  setUserProfile(null);
-                  setProfileLoading(false);
-                }
-              }
-            } else {
-              // Anonymous users not allowed or user logged out
-              if (isActive) {
-                setUserProfile(null);
-                setProfileLoading(false);
-              }
-              
-              // If logout occurred, reset state after delay
-              if (isLoggedOut) {
-                setTimeout(() => {
-                  if (isActive) {
-                    setIsLoggedOut(false);
-                  }
-                }, LOGOUT_RESET_DELAY_MS);
-              }
-            }
-          } else {
-            // Reset logout state when user successfully logs in
+    // onAuthStateChanged is synchronous and returns unsubscribe immediately,
+    // so we capture it directly to avoid the race condition where cleanup
+    // runs before .then() resolves.
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      // If this effect has been cleaned up, ignore the callback
+      if (!isActive) {
+        return;
+      }
+      
+      setUser(user)
+      setLoading(false)
+      
+      if (!user) {
+        // Check if anonymous users are allowed (defaults to true if not set)
+        const allowAnonymous = import.meta.env.VITE_ALLOW_ANONYMOUS_USERS !== 'false';
+        
+        // Create anonymous user if allowed (and not explicitly logged out)
+        if (!isLoggedOut && allowAnonymous) {
+          try {
+            await signInAnonymously(auth);
+          } catch (error) {
+            console.error('Failed to create anonymous user:', error);
             if (isActive) {
-              setIsLoggedOut(false);
-            }
-            
-            // Fetch user profile for authenticated users (non-anonymous with email)
-            if (!user.isAnonymous && user.email && !isLoggedOut && isActive) {
-              fetchUserProfile();
-            } else if (isActive) {
               setUserProfile(null);
               setProfileLoading(false);
             }
           }
-        });
-
-        // Store unsubscribe function for cleanup
-        return unsubscribe;
-
-      } catch (error) {
-        console.error('Auth initialization error:', error);
+        } else {
+          // Anonymous users not allowed or user logged out
+          if (isActive) {
+            setUserProfile(null);
+            setProfileLoading(false);
+          }
+          
+          // If logout occurred, reset state after delay
+          if (isLoggedOut) {
+            setTimeout(() => {
+              if (isActive) {
+                setIsLoggedOut(false);
+              }
+            }, LOGOUT_RESET_DELAY_MS);
+          }
+        }
+      } else {
+        // Reset logout state when user successfully logs in
         if (isActive) {
-          setLoading(false);
+          setIsLoggedOut(false);
+        }
+        
+        // Fetch user profile for authenticated users (non-anonymous with email)
+        if (!user.isAnonymous && user.email && !isLoggedOut && isActive) {
+          fetchUserProfile();
+        } else if (isActive) {
+          setUserProfile(null);
           setProfileLoading(false);
         }
-      }
-    };
-
-    let unsubscribe: (() => void) | undefined;
-
-    initializeAuth().then((unsub) => {
-      if (unsub && isActive) {
-        unsubscribe = unsub;
       }
     });
 
     return () => {
       isActive = false;
-      if (unsubscribe) {
-        unsubscribe();
-      }
+      unsubscribe();
     };
   }, [isLoggedOut, refreshTrigger])
 

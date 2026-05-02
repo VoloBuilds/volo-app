@@ -406,8 +406,9 @@ async function startServices() {
       const output = data.toString();
       
       if (!startupComplete) {
-        // Check for startup errors
-        if (output.includes('Error:') || output.includes('error') || output.includes('failed')) {
+        // Check for startup errors - use specific patterns to avoid false positives
+        // from benign messages like "0 errors", "No errors found", or "error_reporting"
+        if (/\b(EADDRINUSE|EACCES|MODULE_NOT_FOUND|Cannot find module|SyntaxError|TypeError|ReferenceError|Error:)\b/.test(output) || output.includes('failed')) {
           clearTimeout(startupTimeout);
           console.error('❌ Error during startup:');
           console.error(output);

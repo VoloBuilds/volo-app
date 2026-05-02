@@ -30,6 +30,14 @@ The database server accepts the following CLI arguments:
 
 During development, the port is automatically allocated by the port-manager.js script to avoid conflicts.
 
+## Environment Variables
+
+The following environment variables control the main server's connection pool to this database:
+
+| Variable | Default | Description |
+|---|---|---|
+| `DB_POOL_MAX` | `1` | Maximum number of connections in the postgres.js connection pool. The default of `1` is appropriate for Cloudflare Workers (which handle concurrency via isolates rather than threads). For Node.js deployments with higher concurrency, increase this value (e.g. `5`–`10`). |
+
 ## Connection String
 
 When running, the database can be accessed at:
