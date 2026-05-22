@@ -15,7 +15,7 @@ The database server runs as a separate Node.js process that hosts an embedded Po
 
 ## Database Access
 
-The database server provides a standard PostgreSQL interface without additional HTTP endpoints. You can check if it's running by attempting to connect to the PostgreSQL port or by using the main server's `/api/v1/db-test` endpoint.
+The database server provides a standard PostgreSQL interface without additional HTTP endpoints. You can check if it's running by connecting to the PostgreSQL port (see `DATABASE_URL` from the dev script), or by calling the main API root `GET /` or the tRPC `health` procedure once the app server is up.
 
 ## Scripts
 
@@ -36,7 +36,7 @@ The following environment variables control the main server's connection pool to
 
 | Variable | Default | Description |
 |---|---|---|
-| `DB_POOL_MAX` | `1` | Maximum number of connections in the postgres.js connection pool. The default of `1` is appropriate for Cloudflare Workers (which handle concurrency via isolates rather than threads). For Node.js deployments with higher concurrency, increase this value (e.g. `5`–`10`). |
+| `DB_POOL_MAX` | `10` | Maximum connections in the postgres.js pool (see `server/.env.example`). Lower to `1` for Cloudflare Workers–style single-connection limits; raise for high-concurrency Node.js servers. |
 
 ## Connection String
 

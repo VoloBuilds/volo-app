@@ -2,20 +2,13 @@ import { createContext, useContext, useEffect, useState, useCallback } from 'rea
 import type { User } from 'firebase/auth'
 import { onAuthStateChanged, signInAnonymously } from 'firebase/auth'
 import { auth } from './firebase'
-import { getCurrentUser } from './serverComm'
+import type { UserSelect } from '@server/schema/zod'
+import { getTRPCVanillaClient } from './trpc'
 
 // Constants
 const LOGOUT_RESET_DELAY_MS = 1000;
 
-// User profile from our backend
-interface UserProfile {
-  id: string
-  email: string | null
-  display_name: string | null
-  photo_url: string | null
-  created_at: string
-  updated_at: string
-}
+type UserProfile = UserSelect
 
 type AuthContextType = {
   user: User | null
@@ -125,19 +118,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const fetchUserProfile = useCallback(async () => {
     try {
       setProfileLoading(true)
-      const response = await getCurrentUser()
-      setUserProfile(response.user)
+      const me = await getTRPCVanillaClient().user.me.query()
+      setUserProfile(me)
     } catch (error) {
-      // Only log profile fetch errors if they're not authentication errors
-      // (which can happen during logout when old listeners are still active)
-      if (error instanceof Error && !error.message.includes('Authentication required')) {
+      const unauthorized =
+        typeof error === 'object' &&
+        error !== null &&
+        'data' in error &&
+        (error as { data?: { code?: string } }).data?.code === 'UNAUTHORIZED'
+      if (!unauthorized) {
         console.error('Failed to fetch user profile:', error)
       }
       setUserProfile(null)
     } finally {
       setProfileLoading(false)
     }
-  }, [])  // Empty dependencies since it only uses setState functions
+  }, [])
 
   return (
     <AuthContext.Provider value={{ 

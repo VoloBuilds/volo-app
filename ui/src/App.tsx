@@ -23,7 +23,7 @@ function AppContent() {
     if (user && !user.isAnonymous) {
       setShowLoginForAnonymous(false);
     }
-  }, [user?.isAnonymous]);
+  }, [user]);
 
   // Show loading while authentication or profile is loading
   if (loading || profileLoading) {

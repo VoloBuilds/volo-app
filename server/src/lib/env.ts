@@ -89,7 +89,7 @@ export function getNodeEnv() {
 /**
  * Type guard to check if we're in a Cloudflare Workers environment
  */
-export function isCloudflareEnv(source: EnvLike): boolean {
+export function isCloudflareEnv(_source: EnvLike): boolean {
   // In Cloudflare Workers, process.env is not available or is empty
   return typeof process === 'undefined' || Object.keys(process.env).length === 0;
 } 

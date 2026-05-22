@@ -1,4 +1,5 @@
-- Tech stack: React (vite), Tailwind, ShadCN, Firebase Auth, Supabase postgres, pnpm, Node.JS, Hono API
+- Tech stack: React (vite), Tailwind, ShadCN, Firebase Auth, Supabase postgres, pnpm, Node.JS, Hono API, trpc, drizzle
 - Use `pnpm add` when installing new packages.
 - Use `npx shadcn add` to add new shadcn components.
 - You are not able to see or modify .env files directly - so tell the user what they should add to the file if needed.
+- Never commit docs/features content

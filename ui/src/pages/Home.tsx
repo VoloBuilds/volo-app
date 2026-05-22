@@ -1,27 +1,11 @@
 import { useAuth } from '@/lib/auth-context';
-import { api } from '@/lib/serverComm';
-import { useEffect, useState } from 'react';
+import { trpc } from '@/lib/trpc';
 
 export function Home() {
   const { user } = useAuth();
-  const [serverUserInfo, setServerUserInfo] = useState(null);
-  const [serverError, setServerError] = useState('');
-
-  useEffect(() => {
-    async function fetchUserInfo() {
-      if (user) {
-        try {
-          const data = await api.getCurrentUser();
-          setServerUserInfo(data);
-          setServerError('');
-        } catch (error) {
-          setServerError('Failed to fetch user info from server');
-          console.error('Server error:', error);
-        }
-      }
-    }
-    fetchUserInfo();
-  }, [user]);
+  const { data, error, isPending } = trpc.user.me.useQuery(undefined, {
+    enabled: !!user,
+  });
 
   return (
     <div className="container mx-auto p-6">
@@ -30,20 +14,22 @@ export function Home() {
         <p className="text-muted-foreground">
           This is your application template with authentication and routing ready to go.
         </p>
-        
-        {serverError ? (
-          <p className="text-red-500">{serverError}</p>
-        ) : serverUserInfo ? (
+
+        {error ? (
+          <p className="text-red-500">{error.message || 'Failed to fetch user info from server'}</p>
+        ) : data ? (
           <div className="p-4 border rounded-lg max-w-md mx-auto">
             <h2 className="text-xl font-semibold mb-2">Server User Info</h2>
             <pre className="text-left bg-muted p-2 rounded text-sm">
-              {JSON.stringify(serverUserInfo, null, 2)}
+              {JSON.stringify({ user: data, message: 'You are authenticated!' }, null, 2)}
             </pre>
           </div>
-        ) : (
+        ) : isPending && user ? (
           <p>Loading server info...</p>
+        ) : (
+          <p className="text-muted-foreground">Sign in to load server user info.</p>
         )}
       </div>
     </div>
   );
-} 
+}

@@ -1,9 +1,12 @@
+/**
+ * Authenticated REST helper for streaming, file upload/download, and other plain HTTP.
+ * User profile and other data access use tRPC only (`@/lib/trpc`); there is no REST `/protected/me`.
+ */
 import { getAuth } from 'firebase/auth';
 import { app } from './firebase';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787';
 
-// Functional error type instead of class
 interface APIError extends Error {
   status: number;
   code?: string;
@@ -28,13 +31,13 @@ async function getAuthToken(): Promise<string | null> {
   return user.getIdToken();
 }
 
-async function fetchWithAuth(
+export async function fetchWithAuth(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<Response> {
   const token = await getAuthToken();
   const headers = new Headers(options.headers);
-  
+
   if (token) {
     headers.set('Authorization', `Bearer ${token}`);
   }
@@ -46,7 +49,7 @@ async function fetchWithAuth(
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({ error: response.statusText }));
-    
+
     throw createAPIError(
       response.status,
       errorData.error || errorData.message || `API request failed: ${response.statusText}`,
@@ -57,48 +60,3 @@ async function fetchWithAuth(
 
   return response;
 }
-
-// API endpoints
-export async function getCurrentUser(): Promise<{
-  user: {
-    id: string;
-    email: string | null;
-    display_name: string | null;
-    photo_url: string | null;
-    created_at: string;
-    updated_at: string;
-  };
-  message: string;
-}> {
-  const response = await fetchWithAuth('/api/v1/protected/me');
-  return response.json();
-}
-
-export async function updateProfile(displayName: string): Promise<{ success: true }> {
-  const response = await fetchWithAuth('/api/v1/protected/me', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ display_name: displayName }),
-  });
-  return response.json();
-}
-
-// Example of how to add more API endpoints:
-// export async function createChat(data: CreateChatData) {
-//   const response = await fetchWithAuth('/api/v1/protected/chats', {
-//     method: 'POST',
-//     headers: {
-//       'Content-Type': 'application/json',
-//     },
-//     body: JSON.stringify(data),
-//   });
-//   return response.json();
-// }
-
-export const api = {
-  getCurrentUser,
-  updateProfile,
-  // Add other API endpoints here
-}; 

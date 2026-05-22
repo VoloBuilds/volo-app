@@ -41,13 +41,15 @@ This prevents port conflicts between multiple instances and ensures proper servi
 
 ### Services and Default Ports
 
-| Service | Default Port | Purpose |
-|---------|-------------|---------|
-| **Backend API** | 8787 | Your Hono server |
-| **Frontend (Vite)** | 5173 | React development server |
-| **PostgreSQL** | 5433 | Embedded database |
-| **Firebase Auth Emulator** | 9099 | Authentication testing |
-| **Firebase Emulator UI** | 4000 | Emulator dashboard |
+
+| Service                    | Default Port | Purpose                  |
+| -------------------------- | ------------ | ------------------------ |
+| **Backend API**            | 8787         | Your Hono server         |
+| **Frontend (Vite)**        | 5173         | React development server |
+| **PostgreSQL**             | 5433         | Embedded database        |
+| **Firebase Auth Emulator** | 9099         | Authentication testing   |
+| **Firebase Emulator UI**   | 4000         | Emulator dashboard       |
+
 
 ## 📋 Port Status Display
 
@@ -84,6 +86,7 @@ pnpm run dev    # Uses ports 8788, 5174, 5434, etc.
 ```
 
 ### What Gets Isolated:
+
 - ✅ **PostgreSQL databases** - each project has its own `data/postgres` directory
 - ✅ **HTTP services** - automatic port conflict resolution
 - ✅ **Firebase emulator data** - stored in each project's `data/firebase-emulator` folder
@@ -100,6 +103,7 @@ pnpm run dev
 ```
 
 **Features:**
+
 - ✅ Embedded PostgreSQL database
 - ✅ Hot reload for server and frontend
 - ✅ Firebase Auth emulator
@@ -114,6 +118,7 @@ pnpm run dev -- --cloudflare
 ```
 
 **Features:**
+
 - ⚡ Wrangler dev server (simulates Cloudflare Workers)
 - 🌐 **Requires remote database** (Neon, Supabase, etc.)
 - ✅ Firebase Auth emulator

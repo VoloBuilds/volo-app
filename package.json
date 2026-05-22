@@ -13,9 +13,9 @@
     "connect:database:supabase": "npx create-volo-app --connect --database supabase",
     "connect:database:custom": "npx create-volo-app --connect --database custom",
     "connect:deploy": "npx create-volo-app --connect --deploy",
-    "connection:status": "npx create-volo-app --status",
+    "connection:status": "npx create-volo-app --connect",
     "build": "cd ui && pnpm run build",
-    "deploy": "cd server && wrangler deploy && echo 'Frontend deployment: Connect your Git repo to Cloudflare Pages'"
+    "deploy": "cd server && pnpm run deploy && cd ../ui && pnpm run deploy"
   },
   "engines": {
     "node": ">=20.0.0",

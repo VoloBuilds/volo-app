@@ -265,13 +265,13 @@ async function setupLocalDatabase() {
     console.log('');
     console.log('Next steps:');
     console.log('');
-    console.log('1. Use a cloud database instead:');
-    console.log('   • Run create-volo-app again with the --database flag');
+    console.log('1. Connect to a cloud database:');
+    console.log('   • Run: pnpm connect:database');
     console.log('   • Choose a cloud provider like Neon or Supabase');
     console.log('');
     console.log('2. Or install PostgreSQL locally:');
     console.log('   • macOS: brew install postgresql@15 && brew services start postgresql@15');
-    console.log('   • Then run create-volo-app again with "Other PostgreSQL" option');
+    console.log('   • Then run: pnpm connect:database and choose "Other PostgreSQL"');
     console.log('');
     
     // Re-throw the error so the outer catch can handle the exit properly

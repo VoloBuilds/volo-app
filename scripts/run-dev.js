@@ -408,7 +408,7 @@ async function startServices() {
       if (!startupComplete) {
         // Check for startup errors - use specific patterns to avoid false positives
         // from benign messages like "0 errors", "No errors found", or "error_reporting"
-        if (/\b(EADDRINUSE|EACCES|MODULE_NOT_FOUND|Cannot find module|SyntaxError|TypeError|ReferenceError|Error:)\b/.test(output) || output.includes('failed')) {
+        if (/\b(EADDRINUSE|EACCES|MODULE_NOT_FOUND|Cannot find module|SyntaxError|TypeError|ReferenceError|Error:)\b/.test(output)) {
           clearTimeout(startupTimeout);
           console.error('❌ Error during startup:');
           console.error(output);
@@ -430,39 +430,83 @@ async function startServices() {
       }
     };
 
-    // Cleanup on exit
-    const signals = process.platform === 'win32' 
-      ? ['SIGINT', 'SIGTERM', 'SIGBREAK']
-      : ['SIGINT', 'SIGTERM'];
-    
+    let isShuttingDown = false;
+
     const killChildProcesses = () => {
-      if (child && !child.killed) {
-        if (process.platform === 'win32') {
-          // On Windows, kill the child process directly
-          child.kill('SIGKILL');
-        } else {
-          // On Unix systems, kill the entire process group
-          try {
-            // Kill the process group (negative PID)
-            process.kill(-child.pid, 'SIGKILL');
-          } catch (error) {
-            // Fallback to killing just the child process
-            child.kill('SIGKILL');
-          }
-        }
+      if (!child || child.killed) {
+        return;
       }
+
+      const forceKill = () => {
+        if (!child || child.killed) {
+          return;
+        }
+
+        if (process.platform === 'win32') {
+          child.kill('SIGKILL');
+          return;
+        }
+
+        try {
+          process.kill(-child.pid, 'SIGKILL');
+        } catch {
+          child.kill('SIGKILL');
+        }
+      };
+
+      if (process.platform === 'win32') {
+        child.kill('SIGTERM');
+        setTimeout(forceKill, 2000);
+        return;
+      }
+
+      try {
+        process.kill(-child.pid, 'SIGTERM');
+      } catch {
+        child.kill('SIGTERM');
+      }
+
+      setTimeout(forceKill, 2000);
     };
-    
-    signals.forEach(signal => {
-      process.on(signal, () => {
-        console.log(`\n🛑 Shutting down services...`);
-        cleanup();
-        killChildProcesses();
-        setTimeout(() => process.exit(0), 1000);
-      });
+
+    const shutdown = (reason = 'signal') => {
+      if (isShuttingDown) {
+        return;
+      }
+      isShuttingDown = true;
+
+      console.log(`\n🛑 Shutting down services (${reason})...`);
+      cleanup();
+      killChildProcesses();
+      setTimeout(() => process.exit(0), 2500);
+    };
+
+    const signals = process.platform === 'win32'
+      ? ['SIGINT', 'SIGTERM', 'SIGBREAK']
+      : ['SIGINT', 'SIGTERM', 'SIGHUP'];
+
+    signals.forEach((signal) => {
+      process.on(signal, () => shutdown(signal));
     });
 
+    // Background shells and CI runners often close stdin without a TTY signal.
+    // Set VOLO_DEV_IGNORE_STDIN=1 to keep services running after the parent exits.
+    const ignoreStdinClose =
+      process.env.VOLO_DEV_IGNORE_STDIN === '1' ||
+      process.env.VOLO_DEV_IGNORE_STDIN === 'true';
+
+    if (!process.stdin.isTTY && !ignoreStdinClose) {
+      process.stdin.resume();
+      const onStdinClosed = () => shutdown('stdin closed');
+      process.stdin.once('end', onStdinClosed);
+      process.stdin.once('close', onStdinClosed);
+    }
+
     child.on('exit', (code, signal) => {
+      if (isShuttingDown) {
+        return;
+      }
+      isShuttingDown = true;
       cleanup();
       if (code !== 0 && signal !== 'SIGKILL' && signal !== 'SIGTERM') {
         console.log(`\n❌ Services stopped with error code ${code}`);

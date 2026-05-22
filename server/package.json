@@ -11,14 +11,18 @@
   },
   "dependencies": {
     "@hono/node-server": "^1.12.0",
+    "@hono/trpc-server": "^0.4.2",
     "@neondatabase/serverless": "^0.9.0",
+    "@trpc/server": "^11.17.0",
     "dotenv": "^16.0.0",
     "drizzle-orm": "^0.30.1",
+    "drizzle-zod": "^0.5.1",
     "firebase-admin": "^12.0.0",
     "fs-extra": "^11.2.0",
-    "hono": "^4.0.5",
+    "hono": "^4.8.0",
     "jose": "^5.2.3",
-    "postgres": "^3.4.7"
+    "postgres": "^3.4.7",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240208.0",
