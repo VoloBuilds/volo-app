@@ -9,7 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import { User } from 'lucide-react';
 
 export function Settings() {
-  const { user, userProfile, profileLoading, forceRefresh } = useAuth();
+  const { user, userProfile, profileLoading } = useAuth();
   const [displayName, setDisplayName] = useState('');
 
   useEffect(() => {
@@ -23,7 +23,6 @@ export function Settings() {
   const updateMutation = trpc.user.update.useMutation({
     onSuccess: async () => {
       await utils.user.me.invalidate();
-      forceRefresh();
     },
   });
 

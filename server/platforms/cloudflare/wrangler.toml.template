@@ -14,4 +14,4 @@ DATABASE_URL = "{{DATABASE_URL}}"
 # Development tools configuration
 [dev]
 local_protocol = "http"
-port = 8787  # Will be dynamically updated by port-manager.js
+port = 5500  # Will be dynamically updated by port-manager.js

@@ -428,7 +428,7 @@ async function runPostSetup() {
     console.error('❌ Post-setup failed:', error.message);
     console.log('');
     console.log('💡 You can complete setup manually:');
-    console.log('   • For local database: pnpm setup:local');
+    console.log('   • For local database: pnpm post-setup or pnpm run dev from project root');
     console.log('   • For production database: cd server && pnpm db:push');
     process.exit(1);
   }

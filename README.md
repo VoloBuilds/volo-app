@@ -92,10 +92,12 @@ Uses Drizzle ORM. Schema lives in `server/src/schema/`.
 cd server && pnpm db:push    # Push schema changes to database
 ```
 
+**After Cloudflare deploy is connected** (`pnpm connect:deploy` or scaffold with `--deploy`), root `pnpm run dev` switches to **Wrangler dev** and does **not** start embedded PostgreSQL. To develop with the local embedded database, run **`pnpm dev:node`** instead (added when deploy is connected).
+
 ## UI Components
 
 ```bash
-cd ui && npx shadcn-ui@latest add [component]
+cd ui && npx shadcn@latest add [component]
 ```
 
 Browse available components at [ui.shadcn.com](https://ui.shadcn.com).
@@ -103,6 +105,8 @@ Browse available components at [ui.shadcn.com](https://ui.shadcn.com).
 ## Deployment
 
 Prerequisite: run `pnpm connect:deploy` (or scaffold with `--deploy` / a `volo-config.json` deploy section).
+
+Connecting Cloudflare deploy updates the server to use **Wrangler dev**. After that, root **`pnpm run dev`** simulates the Workers runtime and expects a **remote** `DATABASE_URL` — it will not start embedded PostgreSQL. For local development with the embedded database, use **`pnpm dev:node`**.
 
 Deploy both API and UI to Cloudflare Workers:
 

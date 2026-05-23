@@ -47,6 +47,7 @@ function parseCliArgs() {
   const args = process.argv.slice(2);
   return {
     useWrangler: args.includes('--wrangler') || args.includes('--cloudflare'),
+    forceNode: args.includes('--node'),
     help: args.includes('--help') || args.includes('-h')
   };
 }
@@ -103,7 +104,8 @@ function showHelp() {
 🌊 volo-app Development Server
 
 Usage:
-  npm run dev                    Start with Node.js server (default)
+  npm run dev                    Start dev server (Node by default; Wrangler if deploy is connected)
+  npm run dev -- --node         Force Node.js server + embedded PostgreSQL
   npm run dev -- --wrangler     Start with Cloudflare Wrangler dev server
   npm run dev -- --help         Show this help
 
@@ -193,15 +195,18 @@ async function startServices() {
   let firebaseConfigPath = null;
 
   try {
-    // Auto-detect wrangler usage
+    // Auto-detect wrangler usage (unless --node forces Node + embedded Postgres)
     const autoDetectedWrangler = detectWranglerUsage();
-    const useWrangler = cliArgs.useWrangler || autoDetectedWrangler;
-    
-    if (autoDetectedWrangler && !cliArgs.useWrangler) {
+    const useWrangler = cliArgs.forceNode
+      ? false
+      : cliArgs.useWrangler || autoDetectedWrangler;
+
+    if (cliArgs.forceNode) {
+      console.log('🟢 Node.js mode (--node): embedded PostgreSQL enabled');
+    } else if (autoDetectedWrangler && !cliArgs.useWrangler) {
       console.log('⚡ Auto-detected Cloudflare Workers mode');
     }
-    
-    // Override CLI args with auto-detection result
+
     cliArgs.useWrangler = useWrangler;
     
     // Detect environment configuration

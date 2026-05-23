@@ -1,4 +1,4 @@
-# Chat App API
+# Volo App API
 
 This is the API server for the Chat App, built with Cloudflare Workers.
 

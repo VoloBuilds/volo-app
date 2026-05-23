@@ -9,9 +9,11 @@ import { parseWranglerDeployUrl, readWranglerWorkerName } from './parse-wrangler
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.join(__dirname, '..');
 
-const NOT_CONFIGURED_MESSAGE = `Deployment is not configured.
+const NOT_CONFIGURED_MESSAGE = `UI deployment is not configured yet (missing ui/wrangler.toml or a deploy script in ui/package.json).
 
 Run: pnpm connect:deploy
+
+This adds the UI Wrangler config and deploy script.
 
 Or create the project with --deploy or a volo-config.json deploy section.`;
 

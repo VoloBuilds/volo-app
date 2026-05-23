@@ -305,7 +305,7 @@ export function checkDatabaseConfiguration(useWrangler) {
       console.error('   Please create server/.dev.vars with a remote database URL.');
       return false;
     }
-    console.error('❌ No .env file found. Run `pnpm run setup:local` first to set up your database.');
+    console.error('❌ No .env file found. Run `pnpm post-setup` or `pnpm run dev` from the project root to set up embedded PostgreSQL.');
     return false;
   }
 
@@ -317,7 +317,7 @@ export function checkDatabaseConfiguration(useWrangler) {
     if (useWrangler) {
       console.error('   Please add DATABASE_URL to server/.dev.vars with a remote database.');
     } else {
-      console.error('   Run `pnpm run setup:local` to set up embedded PostgreSQL.');
+      console.error('   Run `pnpm post-setup` or `pnpm run dev` from the project root to set up embedded PostgreSQL.');
     }
     return false;
   }
@@ -409,11 +409,12 @@ export function updateWranglerConfigWithPort(availablePorts, useFirebaseEmulator
       modifications: []
     };
     
+    const newPortLine = `port = ${availablePorts.backend}`;
+
     // Check if [dev] section exists
     if (updatedContent.includes('[dev]')) {
       // Check if port is already set in [dev] section (handle comments and whitespace)
       const portLineMatch = updatedContent.match(/^port\s*=\s*\d+.*$/m);
-      const newPortLine = `port = ${availablePorts.backend}`;
       
       if (portLineMatch) {
         // Port line exists, update it

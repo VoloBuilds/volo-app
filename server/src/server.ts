@@ -9,7 +9,7 @@ const parseCliArgs = () => {
   const portIndex = args.indexOf('--port');
   
   return {
-    port: portIndex !== -1 ? parseInt(args[portIndex + 1]) : parseInt(getEnv('PORT', '8787')!),
+    port: portIndex !== -1 ? parseInt(args[portIndex + 1]) : parseInt(getEnv('PORT', '5500')!),
   };
 };
 
@@ -24,7 +24,7 @@ const getPostgresPortFromDatabaseUrl = (): number => {
       return parseInt(match[1]);
     }
   }
-  return 5433; // fallback default
+  return 5502; // fallback default
 };
 
 const startServer = async () => {

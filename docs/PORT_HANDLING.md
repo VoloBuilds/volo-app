@@ -126,13 +126,15 @@ pnpm run dev -- --cloudflare
 
 **Note:** Embedded PostgreSQL is not available in Cloudflare Workers mode.
 
+**After `pnpm connect:deploy` (or initial `--deploy`):** root `pnpm run dev` auto-detects Wrangler and runs in Workers mode. Use **`pnpm dev:node`** to force Node.js dev and start embedded PostgreSQL instead.
+
 ## 🗄️ Database Handling
 
 ### Embedded PostgreSQL (Node.js Mode)
 
 When using embedded PostgreSQL (the default for local development):
 
-- **Port assignment:** Dynamic, starting from 5433
+- **Port assignment:** Dynamic, starting from 5502
 - **Data isolation:** Each project folder has its own `data/postgres` directory
 - **Conflict detection:** Prevents multiple instances from using the same data directory
 - **Port conflicts matter:** If PostgreSQL ports conflict, the system finds alternatives
@@ -148,6 +150,8 @@ DATABASE_URL=postgresql://user:password@host.neon.tech:5432/mydb
 - **No port conflicts:** Database runs remotely, no local port management needed
 - **Shared access:** Multiple projects can connect to the same external database
 - **Required for Wrangler mode:** Cloudflare Workers cannot run embedded PostgreSQL
+
+**After Cloudflare deploy is connected:** `pnpm run dev` uses Wrangler by default. Run **`pnpm dev:node`** when you want embedded PostgreSQL with the Node.js API server.
 
 **Supported providers:** Neon (recommended), Supabase, Railway, or any PostgreSQL-compatible service.
 
