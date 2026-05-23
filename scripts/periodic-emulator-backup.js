@@ -35,26 +35,28 @@ async function exportEmulatorData() {
   try {
     isBackupRunning = true;
     backupCount++;
+
+    // Use Firebase CLI to export emulator data
+    const { exec } = await import('child_process');
+    const { promisify } = await import('util');
+    const execAsync = promisify(exec);
+
+    const command = `firebase emulators:export ${EXPORT_PATH} --project demo-project --force`;
     
-    const response = await fetch(`http://localhost:${EMULATOR_HUB_PORT}/emulators/export`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        path: EXPORT_PATH
-      }),
+    const { stdout, stderr } = await execAsync(command, {
+      cwd: path.join(__dirname, '..'),
+      timeout: 30000 // 30 second timeout
     });
 
-    if (response.ok) {
-      console.log(`💾 Emulator data backed up (#${backupCount}) - ${new Date().toISOString()}`);
-    } else {
-      console.warn(`⚠️  Backup failed (HTTP ${response.status}): ${response.statusText}`);
+    if (stderr && !stderr.includes('Warning')) {
+      console.warn(`⚠️  Backup warning: ${stderr}`);
     }
+
+    console.log(`💾 Emulator data backed up (#${backupCount}) - ${new Date().toISOString()}`);
   } catch (error) {
     // Don't log connection errors during startup - emulator might not be ready yet
     if (backupCount > 2) {
-      console.warn(`⚠️  Backup failed: ${error.message}`);
+      console.warn(`⚠️  Backup failed: ${error}`);
     }
   } finally {
     isBackupRunning = false;
@@ -78,15 +80,15 @@ async function isEmulatorRunning() {
  */
 async function startPeriodicBackup() {
   console.log('🔄 Starting periodic Firebase emulator backup (every 60s)...');
-  
+
   // Wait for emulator to be ready
   console.log('⏳ Waiting for Firebase emulator to start...');
   while (!(await isEmulatorRunning())) {
     await sleep(2000); // Check every 2 seconds
   }
-  
+
   console.log('✅ Firebase emulator detected, starting periodic backups');
-  
+
   // Start periodic backups
   while (true) {
     await exportEmulatorData();
@@ -103,10 +105,10 @@ function setupShutdownHandlers() {
     process.exit(0);
   };
 
-  const signals = process.platform === 'win32' 
+  const signals = process.platform === 'win32'
     ? ['SIGINT', 'SIGTERM', 'SIGBREAK']
     : ['SIGINT', 'SIGTERM'];
-  
+
   signals.forEach(signal => {
     process.on(signal, shutdown);
   });
@@ -119,4 +121,6 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     console.error('❌ Periodic backup failed:', error);
     process.exit(1);
   });
-} 
+}
+
+export { exportEmulatorData }; 
