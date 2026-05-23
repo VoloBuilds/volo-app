@@ -36,7 +36,7 @@ The API uses Firebase's public JWKS endpoint to verify tokens, so no additional 
 
 ## Development Server Configuration
 
-The development server configuration is set in `wrangler.toml`. By default, it runs on port 8787. To use a different port:
+The development server configuration is set in `wrangler.toml`. By default, root `pnpm run dev` uses port **5500** for the API. To use a different port:
 
 1. **Option 1**: Modify `wrangler.toml` directly
    ```toml
@@ -59,10 +59,10 @@ pnpm wrangler dev
 
 This will:
 - Load variables from `.dev.vars`
-- Start the development server (default port: 8787)
+- Start the development server (default port: 5500 when using root `pnpm run dev`)
 - Enable local development tools
 
-Your API will be available at `http://localhost:8787` (or your configured port).
+Your API will be available at `http://localhost:5500` (or your configured port).
 
 ## Build Process
 

@@ -1,6 +1,8 @@
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 import { useFirebaseEmulator, getEnv } from './env';
 
+type CachedJwks = ReturnType<typeof createRemoteJWKSet>;
+
 export type FirebaseUser = {
   id: string;
   email: string | undefined;
@@ -19,24 +21,36 @@ function profileFromTokenPayload(payload: Record<string, unknown>): Pick<Firebas
   };
 }
 
-const getJWKS = () => {
+const PRODUCTION_JWKS_URL =
+  'https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com';
+
+let productionJwks: CachedJwks | null = null;
+let emulatorJwks: CachedJwks | null = null;
+let emulatorJwksHost: string | null = null;
+
+function getJWKS(): CachedJwks {
   if (useFirebaseEmulator()) {
-    // Use emulator JWKS endpoint with dynamic port
     const firebaseAuthHost = getEnv('FIREBASE_AUTH_EMULATOR_HOST') ?? 'localhost:5503';
-    const emulatorUrl = firebaseAuthHost.startsWith('http') 
-      ? firebaseAuthHost 
-      : `http://${firebaseAuthHost}`;
-    
-    return createRemoteJWKSet(
-      new URL(`${emulatorUrl}/www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com`)
-    );
-  } else {
-    // Use production Firebase JWKS
-    return createRemoteJWKSet(
-      new URL('https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com')
-    );
+    if (!emulatorJwks || emulatorJwksHost !== firebaseAuthHost) {
+      const emulatorUrl = firebaseAuthHost.startsWith('http')
+        ? firebaseAuthHost
+        : `http://${firebaseAuthHost}`;
+
+      emulatorJwksHost = firebaseAuthHost;
+      emulatorJwks = createRemoteJWKSet(
+        new URL(`${emulatorUrl}/www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com`)
+      );
+    }
+
+    return emulatorJwks;
   }
-};
+
+  if (!productionJwks) {
+    productionJwks = createRemoteJWKSet(new URL(PRODUCTION_JWKS_URL));
+  }
+
+  return productionJwks;
+}
 
 export async function verifyFirebaseToken(token: string, projectId: string): Promise<FirebaseUser> {
   if (!projectId) {
@@ -87,4 +101,4 @@ export async function verifyFirebaseToken(token: string, projectId: string): Pro
   } catch (error) {
     throw new Error('Invalid token');
   }
-} 
+}

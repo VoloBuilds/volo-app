@@ -4,7 +4,7 @@ import { spawnSync } from 'child_process';
 import { existsSync, readFileSync, writeFileSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { parseWranglerDeployUrl } from './parse-wrangler-deploy-url.js';
+import { parseWranglerDeployUrl, readWranglerWorkerName } from './parse-wrangler-deploy-url.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.join(__dirname, '..');
@@ -30,10 +30,28 @@ function isDeployConfigured() {
   return Boolean(packageJson.scripts?.deploy);
 }
 
+function upsertEnvVar(envPath, key, value) {
+  const line = `${key}=${value}`;
+
+  if (!existsSync(envPath)) {
+    writeFileSync(envPath, `# Production API URL (auto-written by pnpm run deploy)\n${line}\n`);
+    return;
+  }
+
+  const content = readFileSync(envPath, 'utf-8');
+  const regex = new RegExp(`^${key}=.*$`, 'm');
+
+  if (regex.test(content)) {
+    writeFileSync(envPath, content.replace(regex, line));
+    return;
+  }
+
+  const trimmed = content.trimEnd();
+  writeFileSync(envPath, `${trimmed}${trimmed ? '\n' : ''}${line}\n`);
+}
+
 function writeProductionApiUrl(apiUrl) {
-  const envPath = path.join(rootDir, 'ui', '.env.production');
-  const content = `# Production API URL (auto-written by pnpm run deploy)\nVITE_API_URL=${apiUrl}\n`;
-  writeFileSync(envPath, content);
+  upsertEnvVar(path.join(rootDir, 'ui', '.env.production'), 'VITE_API_URL', apiUrl);
 }
 
 function runServerDeploy() {
@@ -80,6 +98,30 @@ function runUiDeploy(apiUrl) {
   }
 }
 
+function printUrlDetectionFailure(deployOutput) {
+  const serverWranglerPath = path.join(rootDir, 'server', 'wrangler.toml');
+  const workerName = readWranglerWorkerName(serverWranglerPath);
+
+  console.error('API deployed but could not detect the Worker URL from Wrangler output.');
+  console.error('');
+  console.error('What to do next:');
+  console.error('  1. Find your Worker URL in the Wrangler output above (look for *.workers.dev).');
+  if (workerName) {
+    console.error(`  2. Your server worker name is "${workerName}" — the URL is usually https://${workerName}.<account>.workers.dev`);
+  } else {
+    console.error('  2. Check the Cloudflare dashboard for your Worker URL.');
+  }
+  console.error('  3. Set VITE_API_URL in ui/.env.production to that URL.');
+  console.error('  4. Deploy the UI: pnpm --filter ui run deploy');
+  console.error('');
+  console.error('If Wrangler changed its output format, please report it so URL detection can be updated.');
+
+  if (process.env.DEBUG && deployOutput) {
+    console.error('\n--- Wrangler output (debug) ---');
+    console.error(deployOutput.slice(-2000));
+  }
+}
+
 function main() {
   if (!isDeployConfigured()) {
     console.error(NOT_CONFIGURED_MESSAGE);
@@ -90,10 +132,7 @@ function main() {
   const apiUrl = parseWranglerDeployUrl(deployOutput);
 
   if (!apiUrl) {
-    console.error(`API deployed but could not detect the Worker URL from Wrangler output.
-
-Set VITE_API_URL in ui/.env.production manually, then run:
-  pnpm --filter ui run deploy`);
+    printUrlDetectionFailure(deployOutput);
     process.exit(1);
   }
 

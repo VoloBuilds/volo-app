@@ -18,8 +18,11 @@ export function Settings() {
     }
   }, [userProfile]);
 
+  const utils = trpc.useUtils();
+
   const updateMutation = trpc.user.update.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
+      await utils.user.me.invalidate();
       forceRefresh();
     },
   });

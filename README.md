@@ -16,7 +16,7 @@ Full-stack app built with React + Hono + PostgreSQL. Created with [create-volo-a
 pnpm run dev
 ```
 
-Starts the UI, API server, embedded PostgreSQL, and Firebase Auth emulator. Ports are assigned automatically (defaults: UI on `5173`, API on `5500`, Postgres from `5502`).
+Starts the UI, API server, embedded PostgreSQL, and Firebase Auth emulator. Ports are assigned automatically in a **5500 block** (defaults: API on `5500`, UI on `5501`, Postgres from `5502`, Firebase Auth emulator on `5503`).
 
 The local UI talks to the local API via `ui/.env.local` (`VITE_API_URL=http://localhost:5500`). Root `pnpm run dev` overrides this with dynamic ports automatically.
 

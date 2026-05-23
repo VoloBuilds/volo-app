@@ -36,6 +36,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoggedOut, setIsLoggedOut] = useState(false)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
 
+  const fetchUserProfile = useCallback(async () => {
+    try {
+      setProfileLoading(true)
+      const me = await getTRPCVanillaClient().user.me.query()
+      setUserProfile(me)
+    } catch (error) {
+      const unauthorized =
+        typeof error === 'object' &&
+        error !== null &&
+        'data' in error &&
+        (error as { data?: { code?: string } }).data?.code === 'UNAUTHORIZED'
+      if (!unauthorized) {
+        console.error('Failed to fetch user profile:', error)
+      }
+      setUserProfile(null)
+    } finally {
+      setProfileLoading(false)
+    }
+  }, [])
+
   useEffect(() => {
     // Create a flag to track if this effect is still active
     let isActive = true;
@@ -91,9 +111,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setIsLoggedOut(false);
         }
         
-        // Fetch user profile for authenticated users (non-anonymous with email)
+        // Fetch server profile for signed-in users (non-anonymous with email).
+        // Anonymous sessions skip the server profile until a real sign-in provider is used.
         if (!user.isAnonymous && user.email && !isLoggedOut && isActive) {
-          fetchUserProfile();
+          void fetchUserProfile();
         } else if (isActive) {
           setUserProfile(null);
           setProfileLoading(false);
@@ -105,7 +126,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isActive = false;
       unsubscribe();
     };
-  }, [isLoggedOut, refreshTrigger])
+  }, [isLoggedOut, refreshTrigger, fetchUserProfile])
 
   const logout = () => {
     setIsLoggedOut(true);
@@ -114,26 +135,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const forceRefresh = () => {
     setRefreshTrigger(prev => prev + 1);
   }
-
-  const fetchUserProfile = useCallback(async () => {
-    try {
-      setProfileLoading(true)
-      const me = await getTRPCVanillaClient().user.me.query()
-      setUserProfile(me)
-    } catch (error) {
-      const unauthorized =
-        typeof error === 'object' &&
-        error !== null &&
-        'data' in error &&
-        (error as { data?: { code?: string } }).data?.code === 'UNAUTHORIZED'
-      if (!unauthorized) {
-        console.error('Failed to fetch user profile:', error)
-      }
-      setUserProfile(null)
-    } finally {
-      setProfileLoading(false)
-    }
-  }, [])
 
   return (
     <AuthContext.Provider value={{ 
@@ -149,4 +150,4 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   )
 }
 
-export const useAuth = () => useContext(AuthContext) 
+export const useAuth = () => useContext(AuthContext)

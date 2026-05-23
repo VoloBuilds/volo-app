@@ -107,6 +107,21 @@ async function parseEnvFile() {
   }
 }
 
+function isLocalDatabaseUrl(databaseUrl) {
+  if (databaseUrl === 'memory://' || databaseUrl.includes('file:')) {
+    return true;
+  }
+
+  try {
+    const normalized = databaseUrl.replace(/^postgres(ql)?:\/\//, 'http://');
+    const { hostname } = new URL(normalized);
+    const host = hostname.toLowerCase();
+    return host === 'localhost' || host === '127.0.0.1';
+  } catch {
+    return databaseUrl.includes('localhost') || databaseUrl.includes('127.0.0.1');
+  }
+}
+
 async function validateDatabase(envVars) {
   const databaseUrl = envVars.DATABASE_URL;
   
@@ -115,11 +130,8 @@ async function validateDatabase(envVars) {
     return false;
   }
 
-  // Check if using embedded PostgreSQL (local development database)
-  const usingLocalDb = databaseUrl.includes('localhost:5433') || 
-                      databaseUrl.includes('127.0.0.1:5433') || 
-                      databaseUrl.includes('file:') || 
-                      databaseUrl === 'memory://';
+  // Check if using embedded PostgreSQL or any local database (local development only)
+  const usingLocalDb = isLocalDatabaseUrl(databaseUrl);
 
   if (usingLocalDb) {
     logError('Cannot deploy to Cloudflare with local embedded PostgreSQL database');
