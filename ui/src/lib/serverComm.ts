@@ -5,7 +5,8 @@
 import { getAuth } from 'firebase/auth';
 import { app } from './firebase';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787';
+// Fallback for `vite dev` without root run-dev.js; production builds must not rely on this.
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5500';
 
 interface APIError extends Error {
   status: number;

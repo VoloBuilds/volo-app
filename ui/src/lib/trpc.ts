@@ -6,7 +6,8 @@ import { app } from './firebase';
 
 export const trpc = createTRPCReact<AppRouter>();
 
-const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8787';
+// Fallback for `vite dev` without root run-dev.js; production builds must not rely on this.
+const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5500';
 
 const trpcLinks = () => [
   httpBatchLink({

@@ -15,7 +15,7 @@
     "connect:deploy": "npx create-volo-app --connect --deploy",
     "connection:status": "npx create-volo-app --connect",
     "build": "cd ui && pnpm run build",
-    "deploy": "pnpm --filter server run deploy && pnpm --filter ui run deploy"
+    "deploy": "node scripts/deploy-guard.js"
   },
   "engines": {
     "node": ">=20.0.0",

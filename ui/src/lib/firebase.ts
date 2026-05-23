@@ -10,7 +10,7 @@ export const googleProvider = new GoogleAuthProvider();
 // Connect to Firebase Auth emulator only when explicitly enabled
 if (import.meta.env.VITE_USE_FIREBASE_EMULATOR === 'true') {
   try {
-    const firebaseAuthPort = import.meta.env.VITE_FIREBASE_AUTH_EMULATOR_PORT || '9099';
+    const firebaseAuthPort = import.meta.env.VITE_FIREBASE_AUTH_EMULATOR_PORT || '5503';
     const emulatorUrl = `http://localhost:${firebaseAuthPort}`;
     connectAuthEmulator(auth, emulatorUrl, { disableWarnings: true });
     console.log(`🧪 Connected to Firebase Auth emulator at ${emulatorUrl}`);

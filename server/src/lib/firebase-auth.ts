@@ -1,5 +1,5 @@
 import { createRemoteJWKSet, jwtVerify } from 'jose';
-import { isDevelopment, getEnv } from './env';
+import { useFirebaseEmulator, getEnv } from './env';
 
 export type FirebaseUser = {
   id: string;
@@ -20,7 +20,7 @@ function profileFromTokenPayload(payload: Record<string, unknown>): Pick<Firebas
 }
 
 const getJWKS = () => {
-  if (isDevelopment()) {
+  if (useFirebaseEmulator()) {
     // Use emulator JWKS endpoint with dynamic port
     const firebaseAuthHost = getEnv('FIREBASE_AUTH_EMULATOR_HOST') ?? 'localhost:5503';
     const emulatorUrl = firebaseAuthHost.startsWith('http') 
@@ -44,7 +44,7 @@ export async function verifyFirebaseToken(token: string, projectId: string): Pro
   }
 
   // In emulator mode, use simplified token verification
-  if (isDevelopment()) {
+  if (useFirebaseEmulator()) {
     try {
       // Decode the token without verification for emulator
       const parts = token.split('.');

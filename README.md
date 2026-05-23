@@ -16,7 +16,11 @@ Full-stack app built with React + Hono + PostgreSQL. Created with [create-volo-a
 pnpm run dev
 ```
 
-Starts the UI, API server, embedded PostgreSQL, and Firebase Auth emulator. Ports are assigned automatically (defaults: UI on `5173`, API on `8787`, Postgres from `5433`).
+Starts the UI, API server, embedded PostgreSQL, and Firebase Auth emulator. Ports are assigned automatically (defaults: UI on `5173`, API on `5500`, Postgres from `5502`).
+
+The local UI talks to the local API via `ui/.env.local` (`VITE_API_URL=http://localhost:5500`). Root `pnpm run dev` overrides this with dynamic ports automatically.
+
+To aim the local UI at a different backend, set `VITE_API_URL` in `ui/.env.local`, or pass `--api-url` when starting Vite manually.
 
 ### Individual commands
 
@@ -98,17 +102,23 @@ Browse available components at [ui.shadcn.com](https://ui.shadcn.com).
 
 ## Deployment
 
+Prerequisite: run `pnpm connect:deploy` (or scaffold with `--deploy` / a `volo-config.json` deploy section).
+
 Deploy both API and UI to Cloudflare Workers:
 
 ```bash
 pnpm run deploy
 ```
 
+This deploys the API first, writes `ui/.env.production` with the production API URL, then deploys the UI.
+
+`ui/.env.local` is for local dev only — editing it does not change production builds. To change the production API URL, edit `ui/.env.production` or re-run `pnpm run deploy`.
+
 Or deploy individually from the repo root:
 
 ```bash
 pnpm --filter server run deploy    # API Worker
-pnpm --filter ui run deploy        # UI Worker (static assets)
+pnpm --filter ui run deploy        # UI Worker (static assets; requires ui/.env.production)
 ```
 
 Set these environment variables in the Cloudflare Workers dashboard for the API Worker:
@@ -129,3 +139,7 @@ After deploying, add your Workers domain to Firebase Console > Authentication > 
 **Auth issues (local):** The Firebase emulator starts automatically with `pnpm dev`. Emulator data is in `data/firebase-emulator/` and backed up automatically.
 
 **Auth issues (production):** Verify `ui/src/lib/firebase-config.json`, `server/.env`, and authorized domains in Firebase Console.
+
+**UI works locally but production app hits wrong API:** Check `ui/.env.production`, not `.env.local`. Re-run `pnpm run deploy`.
+
+**UI production build fails on VITE_API_URL:** Run `pnpm run deploy` from the project root, or set `VITE_API_URL` in `ui/.env.production` manually after `pnpm --filter server run deploy`.
