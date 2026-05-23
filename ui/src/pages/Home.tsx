@@ -2,7 +2,6 @@ import { useAuth } from '@/lib/auth-context';
 
 export function Home() {
   const { user, userProfile, profileLoading } = useAuth();
-  const hasSignedInProfile = Boolean(user && !user.isAnonymous && user.email);
 
   return (
     <div className="container mx-auto p-6">
@@ -12,7 +11,7 @@ export function Home() {
           This is your application template with authentication and routing ready to go.
         </p>
 
-        {hasSignedInProfile && profileLoading ? (
+        {user && profileLoading ? (
           <p>Loading server info...</p>
         ) : userProfile ? (
           <div className="p-4 border rounded-lg max-w-md mx-auto">
