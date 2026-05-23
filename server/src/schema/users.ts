@@ -1,4 +1,4 @@
-import { pgSchema, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
+import { pgSchema, text, timestamp } from 'drizzle-orm/pg-core';
 
 // Create private schema for application tables
 export const appSchema = pgSchema('app');

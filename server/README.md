@@ -1,4 +1,4 @@
-# Chat App API
+# Volo App API
 
 This is the API server for the Chat App, built with Cloudflare Workers.
 
@@ -36,7 +36,7 @@ The API uses Firebase's public JWKS endpoint to verify tokens, so no additional 
 
 ## Development Server Configuration
 
-The development server configuration is set in `wrangler.toml`. By default, it runs on port 8787. To use a different port:
+The development server configuration is set in `wrangler.toml`. By default, root `pnpm run dev` uses port **5500** for the API. To use a different port:
 
 1. **Option 1**: Modify `wrangler.toml` directly
    ```toml
@@ -59,10 +59,10 @@ pnpm wrangler dev
 
 This will:
 - Load variables from `.dev.vars`
-- Start the development server (default port: 8787)
+- Start the development server (default port: 5500 when using root `pnpm run dev`)
 - Enable local development tools
 
-Your API will be available at `http://localhost:8787` (or your configured port).
+Your API will be available at `http://localhost:5500` (or your configured port).
 
 ## Build Process
 
@@ -72,22 +72,24 @@ This is different from traditional Node.js applications that require a separate 
 
 ## API Authentication
 
-All routes under `/api/v1/protected/*` require authentication. To authenticate requests:
+Data access uses **tRPC** at `/trpc/*`. Authenticated procedures expect a Firebase ID token:
 
-1. Include the Firebase ID token in the Authorization header:
-   ```
-   Authorization: Bearer <firebase-id-token>
-   ```
+```
+Authorization: Bearer <firebase-id-token>
+```
 
-2. The token will be verified and the user information will be available in protected routes.
-
-Example protected route: `/api/v1/protected/me` returns the current user's information.
+The server verifies the token, upserts the user row, and attaches context for procedures (see `server/src/trpc/init.ts`). Use `user.me` and other routers from the shared `AppRouter` type.
 
 ## Deployment
 
-To deploy to production:
+Both the API and UI deploy as Cloudflare Workers. To deploy the API:
 ```bash
 pnpm wrangler deploy
+```
+
+To deploy both API and UI from the project root:
+```bash
+pnpm run deploy
 ```
 
 This will deploy to your Cloudflare Workers environment using the name specified in `wrangler.toml`. Make sure to configure your production environment variables in the Cloudflare dashboard with your production values for:

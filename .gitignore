@@ -19,6 +19,9 @@ build
 # Generated configuration files (created by CLI setup)
 ui/src/lib/firebase-config.json
 server/.dev.vars
+server/wrangler.toml
+ui/wrangler.toml
+volo-config.json
 
 # Editor directories and files
 .vscode/*

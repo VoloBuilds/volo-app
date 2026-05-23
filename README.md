@@ -1,152 +1,149 @@
-# Volo App Template
+# Your Volo App
 
-This is the official template repository for [create-volo-app](https://github.com/VoloBuilds/create-volo-app) - a CLI tool that creates production-ready full-stack applications with a decoupled React frontend and Hono backend.
+Full-stack app built with React + Hono + PostgreSQL. Created with [create-volo-app](https://github.com/VoloBuilds/create-volo-app).
 
-> **⚡ Quick Start:** Use the CLI for the best experience:
-> ```bash
-> npx create-volo-app my-app
-> ```
+## Tech Stack
 
-## 🎯 **Template Overview**
+- **Frontend:** React, TypeScript, Vite, Tailwind CSS, ShadCN
+- **Backend:** Hono (Node.js), tRPC, Drizzle ORM
+- **Auth:** Firebase Authentication
+- **Database:** PostgreSQL (embedded locally, Neon/Supabase/custom in production)
+- **Deployment:** Cloudflare Workers (API + static assets)
 
-This template provides a highly opinionated, production-ready foundation for building full-stack applications with clear separation of concerns and secure handling of authentication and data.
+## Development
 
-**Core Philosophy:**
-- **Decoupled Architecture**: Separate UI (React/Vite) and API (Hono/Cloudflare Workers) for independent development, scaling, and deployment
-- **Rapid Feature Development**: Address foundational setup (auth, DB, UI) upfront so you can focus on building features
-- **Production Ready**: Optimized for deployment on Cloudflare's ecosystem with global edge performance
+```bash
+pnpm run dev
+```
 
-## 🏗️ **Tech Stack**
+Starts the UI, API server, embedded PostgreSQL, and Firebase Auth emulator. Ports are assigned automatically in a **5500 block** (defaults: API on `5500`, UI on `5501`, Postgres from `5502`, Firebase Auth emulator on `5503`).
 
-**Frontend (UI):**
-- ⚛️ React with TypeScript and Vite
-- 🎨 Tailwind CSS + ShadCN/UI components
-- 🔐 Firebase Authentication (Google Sign-In pre-configured)
+The local UI talks to the local API via `ui/.env.local` (`VITE_API_URL=http://localhost:5500`). Root `pnpm run dev` overrides this with dynamic ports automatically.
 
-**Backend (Server):**
-- 🔥 Hono web framework for Cloudflare Workers
-- 🗄️ PostgreSQL with Drizzle ORM (Neon/Supabase support)
-- 🔒 Firebase Admin SDK for token verification
-- ☁️ Edge deployment ready
+To aim the local UI at a different backend, set `VITE_API_URL` in `ui/.env.local`, or pass `--api-url` when starting Vite manually.
 
-**Infrastructure:**
-- 🌐 Cloudflare Pages (frontend hosting)
-- ⚡ Cloudflare Workers (API hosting)
-- 🗄️ Neon/Supabase PostgreSQL
-- 🔐 Firebase Authentication
+### Individual commands
 
-## 📋 **Template Features**
+```bash
+cd ui && pnpm dev          # Frontend only
+cd server && pnpm dev      # Backend only
+cd ui && pnpm build        # Build frontend
+cd server && pnpm run deploy  # Deploy backend
+```
 
-✅ **Comprehensive Setup**: Handles all service configuration automatically via CLI  
-✅ **Security Best Practices**: JWT verification, CORS, secure environment handling  
-✅ **Type Safety**: Full TypeScript coverage across frontend and backend  
-✅ **Modern Tooling**: Vite, pnpm, ESLint, Prettier  
-✅ **Production Deployment**: Cloudflare Workers + Pages configuration  
-✅ **Database Integration**: Drizzle ORM with schema management  
-✅ **Authentication Flow**: Complete Google Sign-In implementation  
-
-## 🛠️ **Template Structure**
+## Project Structure
 
 ```
-├── ui/                          # React frontend
+├── ui/                    # React frontend
 │   ├── src/
-│   │   ├── components/         # ShadCN/UI components
-│   │   ├── lib/               # Firebase config & utilities
-│   │   │   └── firebase-config.template.json  # {{PLACEHOLDERS}}
-│   │   └── App.tsx            # Main application
+│   │   ├── components/    # UI components (ShadCN)
+│   │   ├── lib/           # Utilities, auth, tRPC client
+│   │   └── App.tsx
 │   └── package.json
-├── server/                     # Hono API backend
+├── server/                # Hono API backend
 │   ├── src/
-│   │   ├── middleware/        # Authentication middleware
-│   │   ├── schema/           # Database schema (Drizzle)
-│   │   └── index.ts          # API routes
-│   ├── wrangler.toml         # Cloudflare config with {{WORKER_NAME}}
-│   └── .dev.vars.example     # Environment template
-├── scripts/
-│   └── post-setup.js         # CLI post-processing
-└── package.json              # Template configuration
+│   │   ├── trpc/          # tRPC router and procedures
+│   │   ├── middleware/    # Auth middleware
+│   │   ├── schema/        # Drizzle database schema
+│   │   └── api.ts         # REST routes
+│   ├── .env
+│   └── package.json
+├── data/                  # Local dev data (Postgres, Firebase emulator)
+└── scripts/               # Dev tooling
 ```
 
-## 🔧 **CLI Integration**
+## Connecting Production Services
 
-This template is designed to work seamlessly with `create-volo-app`:
-
-### Placeholder System
-
-The template uses a placeholder replacement system:
-
-```json
-{
-  "WORKER_NAME": "string",
-  "FIREBASE_PROJECT_ID": "string", 
-  "FIREBASE_API_KEY": "string",
-  "FIREBASE_MESSAGING_SENDER_ID": "string",
-  "FIREBASE_APP_ID": "string", 
-  "FIREBASE_MEASUREMENT_ID": "string",
-  "DATABASE_URL": "string"
-}
-```
-
-### CLI Workflow
-
-1. CLI clones this template
-2. CLI replaces `{{PLACEHOLDERS}}` with real service values
-3. CLI calls `pnpm post-setup` for technical setup
-4. User gets a working app with personalized README
-
-## 📚 **Development (Template Contributors)**
-
-To work on this template:
+By default everything runs locally. Connect production services when ready:
 
 ```bash
-git clone https://github.com/VoloBuilds/volo-app.git
-cd volo-app
-pnpm install
+pnpm connect:database           # Interactive database provider selection
+pnpm connect:database:neon      # Neon PostgreSQL
+pnpm connect:database:supabase  # Supabase PostgreSQL
+pnpm connect:database:custom    # Custom PostgreSQL
+
+pnpm connect:auth               # Production Firebase Auth
+pnpm connect:deploy             # Cloudflare Workers deployment
+
+pnpm connection:status          # Check what's connected
 ```
 
-### Testing Template Changes
+Connecting a service updates your `.env` files and creates a backup of the previous config.
 
-Use the CLI in development mode:
+## Adding API Routes
+
+**tRPC (required for typed data):** User profile and other database-backed operations live under `/trpc/*`. Add procedures in `server/src/trpc/routers/` and register them in `router.ts`. Derive input/output schemas from Drizzle in `server/src/schema/zod.ts`.
+
+**REST (non-data HTTP only):** Use REST for streaming, file upload/download, webhooks, or other plain HTTP that does not fit tRPC. Add routes in `server/src/api.ts`:
+
+```typescript
+api.get('/your-route', (c) => {
+  return c.json({ message: 'Hello!' });
+});
+```
+
+Use `authMiddleware` from `server/src/middleware/auth.ts` when a REST route needs Firebase auth. There is no REST user profile endpoint — use `trpc.user.me` and related procedures instead.
+
+## Database
+
+Uses Drizzle ORM. Schema lives in `server/src/schema/`.
 
 ```bash
-# In create-volo-app repository
-pnpm dev test-app --template /path/to/volo-app
+cd server && pnpm db:push    # Push schema changes to database
 ```
 
-### Template Requirements
+**After Cloudflare deploy is connected** (`pnpm connect:deploy` or scaffold with `--deploy`), root `pnpm run dev` switches to **Wrangler dev** and does **not** start embedded PostgreSQL. To develop with the local embedded database, run **`pnpm dev:node`** instead (added when deploy is connected).
 
-- All configuration files must use `{{PLACEHOLDER}}` format
-- `package.json` must include `template.placeholders` definition
-- `scripts/post-setup.js` must handle technical setup tasks
-- Template must be self-contained and buildable after placeholder replacement
-
----
-
-## 📖 **For End Users**
-
-**Want to create a new app?** Use the CLI for the best experience:
+## UI Components
 
 ```bash
-npx create-volo-app my-app
+cd ui && npx shadcn@latest add [component]
 ```
 
-The CLI will:
-- Set up Firebase, database, and Cloudflare automatically
-- Generate all configuration files with real values
-- Create a personalized README for your specific project
-- Handle all technical setup so you can start coding immediately
+Browse available components at [ui.shadcn.com](https://ui.shadcn.com).
 
-## 🤝 **Contributing**
+## Deployment
 
-1. Fork this repository
-2. Make your changes
-3. Test with the CLI: `pnpm dev test-app --template /path/to/your-fork`
-4. Submit a pull request
+Prerequisite: run `pnpm connect:deploy` (or scaffold with `--deploy` / a `volo-config.json` deploy section).
 
-## 📝 **License**
+Connecting Cloudflare deploy updates the server to use **Wrangler dev**. After that, root **`pnpm run dev`** simulates the Workers runtime and expects a **remote** `DATABASE_URL` — it will not start embedded PostgreSQL. For local development with the embedded database, use **`pnpm dev:node`**.
 
-MIT License - see [LICENSE](LICENSE) file for details.
+Deploy both API and UI to Cloudflare Workers:
 
----
+```bash
+pnpm run deploy
+```
 
-**Questions?** Visit the [create-volo-app repository](https://github.com/VoloBuilds/create-volo-app) or [start a discussion](https://github.com/VoloBuilds/create-volo-app/discussions). 
+This deploys the API first, writes `ui/.env.production` with the production API URL, then deploys the UI.
+
+`ui/.env.local` is for local dev only — editing it does not change production builds. To change the production API URL, edit `ui/.env.production` or re-run `pnpm run deploy`.
+
+Or deploy individually from the repo root:
+
+```bash
+pnpm --filter server run deploy    # API Worker
+pnpm --filter ui run deploy        # UI Worker (static assets; requires ui/.env.production)
+```
+
+Set these environment variables in the Cloudflare Workers dashboard for the API Worker:
+
+- `DATABASE_URL` - Database connection string
+- `FIREBASE_PROJECT_ID` - Firebase project ID
+
+After deploying, add your Workers domain to Firebase Console > Authentication > Settings > Authorized domains.
+
+## Troubleshooting
+
+**Backend won't start:** Check `server/.env` and run `pnpm install`.
+
+**Database errors:** Run `cd server && pnpm db:push` to test the connection.
+
+**Frontend build errors:** Clear caches with `cd ui && rm -rf node_modules .vite dist && pnpm install`.
+
+**Auth issues (local):** The Firebase emulator starts automatically with `pnpm dev`. Emulator data is in `data/firebase-emulator/` and backed up automatically.
+
+**Auth issues (production):** Verify `ui/src/lib/firebase-config.json`, `server/.env`, and authorized domains in Firebase Console.
+
+**UI works locally but production app hits wrong API:** Check `ui/.env.production`, not `.env.local`. Re-run `pnpm run deploy`.
+
+**UI production build fails on VITE_API_URL:** Run `pnpm run deploy` from the project root, or set `VITE_API_URL` in `ui/.env.production` manually after `pnpm --filter server run deploy`.

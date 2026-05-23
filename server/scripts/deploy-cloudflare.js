@@ -36,6 +36,30 @@ function logInfo(message) {
   log(`ℹ️  ${message}`, 'blue');
 }
 
+const DEV_ONLY_ENV_KEYS = [
+  'FIREBASE_AUTH_EMULATOR_HOST',
+  'USE_FIREBASE_EMULATOR',
+  'NODE_ENV',
+];
+
+function filterDevOnlyEnvKeys(envVars) {
+  const filtered = { ...envVars };
+  const stripped = [];
+
+  for (const key of DEV_ONLY_ENV_KEYS) {
+    if (key in filtered) {
+      delete filtered[key];
+      stripped.push(key);
+    }
+  }
+
+  if (stripped.length > 0) {
+    logWarning(`Stripped dev-only environment variables from deployment config: ${stripped.join(', ')}`);
+  }
+
+  return filtered;
+}
+
 async function checkWranglerCli() {
   try {
     execSync('wrangler --version', { stdio: 'pipe' });
@@ -83,6 +107,21 @@ async function parseEnvFile() {
   }
 }
 
+function isLocalDatabaseUrl(databaseUrl) {
+  if (databaseUrl === 'memory://' || databaseUrl.includes('file:')) {
+    return true;
+  }
+
+  try {
+    const normalized = databaseUrl.replace(/^postgres(ql)?:\/\//, 'http://');
+    const { hostname } = new URL(normalized);
+    const host = hostname.toLowerCase();
+    return host === 'localhost' || host === '127.0.0.1';
+  } catch {
+    return databaseUrl.includes('localhost') || databaseUrl.includes('127.0.0.1');
+  }
+}
+
 async function validateDatabase(envVars) {
   const databaseUrl = envVars.DATABASE_URL;
   
@@ -91,11 +130,8 @@ async function validateDatabase(envVars) {
     return false;
   }
 
-  // Check if using embedded PostgreSQL (local development database)
-  const usingLocalDb = databaseUrl.includes('localhost:5433') || 
-                      databaseUrl.includes('127.0.0.1:5433') || 
-                      databaseUrl.includes('file:') || 
-                      databaseUrl === 'memory://';
+  // Check if using embedded PostgreSQL or any local database (local development only)
+  const usingLocalDb = isLocalDatabaseUrl(databaseUrl);
 
   if (usingLocalDb) {
     logError('Cannot deploy to Cloudflare with local embedded PostgreSQL database');
@@ -123,6 +159,8 @@ async function validateDatabase(envVars) {
 }
 
 async function generatePlatformConfig(envVars) {
+  const deployEnvVars = filterDevOnlyEnvKeys(envVars);
+
   try {
     // Generate wrangler.toml from template
     const wranglerTemplatePath = path.join(process.cwd(), 'platforms', 'cloudflare', 'wrangler.toml.template');
@@ -132,7 +170,7 @@ async function generatePlatformConfig(envVars) {
       let content = await fs.readFile(wranglerTemplatePath, 'utf-8');
       
       // Replace placeholders
-      for (const [key, value] of Object.entries(envVars)) {
+      for (const [key, value] of Object.entries(deployEnvVars)) {
         const placeholder = `{{${key}}}`;
         content = content.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), value);
       }
@@ -151,12 +189,12 @@ async function generatePlatformConfig(envVars) {
     devVarsContent += '# Auto-generated from .env during deployment\n\n';
     
     // Add all environment variables from .env
-    for (const [key, value] of Object.entries(envVars)) {
+    for (const [key, value] of Object.entries(deployEnvVars)) {
       devVarsContent += `${key}=${value}\n`;
     }
     
     await fs.writeFile(devVarsOutputPath, devVarsContent, 'utf-8');
-    logSuccess(`Generated .dev.vars with ${Object.keys(envVars).length} environment variables`);
+    logSuccess(`Generated .dev.vars with ${Object.keys(deployEnvVars).length} environment variables`);
 
   } catch (error) {
     logError(`Failed to generate platform configuration: ${error.message}`);

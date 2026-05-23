@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth-context';
+import { trpc } from '@/lib/trpc';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,15 +9,26 @@ import { Separator } from '@/components/ui/separator';
 import { User } from 'lucide-react';
 
 export function Settings() {
-  const { user } = useAuth();
-  const [profile, setProfile] = useState({
-    displayName: user?.displayName || '',
-    email: user?.email || '',
+  const { user, userProfile, profileLoading } = useAuth();
+  const [displayName, setDisplayName] = useState('');
+
+  useEffect(() => {
+    if (userProfile) {
+      setDisplayName(userProfile.display_name ?? '');
+    }
+  }, [userProfile]);
+
+  const utils = trpc.useUtils();
+
+  const updateMutation = trpc.user.update.useMutation({
+    onSuccess: async () => {
+      await utils.user.me.invalidate();
+    },
   });
 
-  const handleSave = () => {
-    // TODO: Implement save functionality
-    console.log('Saving settings...', { profile });
+  const handleSave = async () => {
+    updateMutation.reset();
+    await updateMutation.mutateAsync({ display_name: displayName });
   };
 
   return (
@@ -31,7 +43,6 @@ export function Settings() {
 
         <Separator />
 
-        {/* Profile Settings */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -43,13 +54,16 @@ export function Settings() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {profileLoading ? (
+              <p className="text-sm text-muted-foreground">Loading profile…</p>
+            ) : null}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="displayName">Display Name</Label>
                 <Input
                   id="displayName"
-                  value={profile.displayName}
-                  onChange={(e) => setProfile({ ...profile, displayName: e.target.value })}
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
                   placeholder="Enter your display name"
                 />
               </div>
@@ -58,22 +72,34 @@ export function Settings() {
                 <Input
                   id="email"
                   type="email"
-                  value={profile.email}
-                  onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                  placeholder="Enter your email"
+                  value={user?.email ?? ''}
+                  readOnly
+                  disabled
+                  className="bg-muted"
                 />
+                <p className="text-xs text-muted-foreground">
+                  Email is managed by your sign-in provider and cannot be changed here.
+                </p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Save Button */}
-        <div className="flex justify-end">
-          <Button onClick={handleSave} className="w-full md:w-auto">
-            Save Changes
+        <div className="flex flex-col items-end gap-2">
+          {updateMutation.isError ? (
+            <p className="text-sm text-destructive">
+              {updateMutation.error.message || 'Failed to save profile'}
+            </p>
+          ) : null}
+          <Button
+            onClick={() => void handleSave()}
+            disabled={updateMutation.isPending || profileLoading}
+            className="w-full md:w-auto"
+          >
+            {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
           </Button>
         </div>
       </div>
     </div>
   );
-} 
+}

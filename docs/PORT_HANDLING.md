@@ -41,13 +41,15 @@ This prevents port conflicts between multiple instances and ensures proper servi
 
 ### Services and Default Ports
 
-| Service | Default Port | Purpose |
-|---------|-------------|---------|
-| **Backend API** | 8787 | Your Hono server |
-| **Frontend (Vite)** | 5173 | React development server |
-| **PostgreSQL** | 5433 | Embedded database |
-| **Firebase Auth Emulator** | 9099 | Authentication testing |
-| **Firebase Emulator UI** | 4000 | Emulator dashboard |
+
+| Service                    | Default Port (block 5500) | Purpose                  |
+| -------------------------- | ------------------------- | ------------------------ |
+| **Backend API**            | 5500                      | Your Hono server         |
+| **Frontend (Vite)**        | 5501                      | React development server |
+| **PostgreSQL**             | 5502                      | Embedded database        |
+| **Firebase Auth Emulator** | 5503                      | Authentication testing   |
+| **Firebase Emulator UI**   | 5504                      | Emulator dashboard       |
+
 
 ## 📋 Port Status Display
 
@@ -55,10 +57,10 @@ When starting development, you'll see output like this:
 
 ```
 🎉 Your app is ready at:
-   Frontend:  http://localhost:5173
-   Backend:   http://localhost:8787
-   Firebase:  http://localhost:4000
-   Database:  postgresql://postgres:password@localhost:5433/postgres
+   Frontend:  http://localhost:5501
+   Backend:   http://localhost:5500
+   Firebase:  http://localhost:5504
+   Database:  postgresql://postgres:password@localhost:5502/postgres
 ```
 
 **Note:** If default ports are occupied, the system automatically finds available alternatives.
@@ -76,14 +78,15 @@ You can run multiple volo-app projects simultaneously by:
 ```bash
 # Terminal 1
 cd ~/projects/my-first-app
-pnpm run dev    # Uses ports 8787, 5173, 5433, etc.
+pnpm run dev    # Uses ports 5500-5504 (backend, frontend, postgres, firebase auth, firebase UI)
 
 # Terminal 2  
 cd ~/projects/my-second-app
-pnpm run dev    # Uses ports 8788, 5174, 5434, etc.
+pnpm run dev    # Uses ports 5600-5604 (next 100-port block)
 ```
 
 ### What Gets Isolated:
+
 - ✅ **PostgreSQL databases** - each project has its own `data/postgres` directory
 - ✅ **HTTP services** - automatic port conflict resolution
 - ✅ **Firebase emulator data** - stored in each project's `data/firebase-emulator` folder
@@ -100,6 +103,7 @@ pnpm run dev
 ```
 
 **Features:**
+
 - ✅ Embedded PostgreSQL database
 - ✅ Hot reload for server and frontend
 - ✅ Firebase Auth emulator
@@ -114,6 +118,7 @@ pnpm run dev -- --cloudflare
 ```
 
 **Features:**
+
 - ⚡ Wrangler dev server (simulates Cloudflare Workers)
 - 🌐 **Requires remote database** (Neon, Supabase, etc.)
 - ✅ Firebase Auth emulator
@@ -121,13 +126,15 @@ pnpm run dev -- --cloudflare
 
 **Note:** Embedded PostgreSQL is not available in Cloudflare Workers mode.
 
+**After `pnpm connect:deploy` (or initial `--deploy`):** root `pnpm run dev` auto-detects Wrangler and runs in Workers mode. Use **`pnpm dev:node`** to force Node.js dev and start embedded PostgreSQL instead.
+
 ## 🗄️ Database Handling
 
 ### Embedded PostgreSQL (Node.js Mode)
 
 When using embedded PostgreSQL (the default for local development):
 
-- **Port assignment:** Dynamic, starting from 5433
+- **Port assignment:** Dynamic, starting from 5502
 - **Data isolation:** Each project folder has its own `data/postgres` directory
 - **Conflict detection:** Prevents multiple instances from using the same data directory
 - **Port conflicts matter:** If PostgreSQL ports conflict, the system finds alternatives
@@ -144,6 +151,8 @@ DATABASE_URL=postgresql://user:password@host.neon.tech:5432/mydb
 - **Shared access:** Multiple projects can connect to the same external database
 - **Required for Wrangler mode:** Cloudflare Workers cannot run embedded PostgreSQL
 
+**After Cloudflare deploy is connected:** `pnpm run dev` uses Wrangler by default. Run **`pnpm dev:node`** when you want embedded PostgreSQL with the Node.js API server.
+
 **Supported providers:** Neon (recommended), Supabase, Railway, or any PostgreSQL-compatible service.
 
 ## 🔧 Configuration
@@ -159,7 +168,7 @@ The system uses simple defaults and automatic port detection:
 Your `server/.env` focuses on essential configuration:
 
 ```env
-DATABASE_URL=postgresql://postgres:password@localhost:5433/postgres
+DATABASE_URL=postgresql://postgres:password@localhost:5502/postgres
 FIREBASE_PROJECT_ID=demo-project
 ```
 

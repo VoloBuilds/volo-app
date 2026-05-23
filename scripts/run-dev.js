@@ -47,6 +47,7 @@ function parseCliArgs() {
   const args = process.argv.slice(2);
   return {
     useWrangler: args.includes('--wrangler') || args.includes('--cloudflare'),
+    forceNode: args.includes('--node'),
     help: args.includes('--help') || args.includes('-h')
   };
 }
@@ -103,7 +104,8 @@ function showHelp() {
 🌊 volo-app Development Server
 
 Usage:
-  npm run dev                    Start with Node.js server (default)
+  npm run dev                    Start dev server (Node by default; Wrangler if deploy is connected)
+  npm run dev -- --node         Force Node.js server + embedded PostgreSQL
   npm run dev -- --wrangler     Start with Cloudflare Wrangler dev server
   npm run dev -- --help         Show this help
 
@@ -126,9 +128,13 @@ function handleError(error, message = 'Failed to start services') {
 }
 
 function showServiceInfo(availablePorts, useWrangler, config) {
+  const frontendUrl = `http://localhost:${availablePorts.frontend}`;
+  const backendUrl = `http://localhost:${availablePorts.backend}`;
+  console.log(`VOLO_DEV_FRONTEND_URL=${frontendUrl}`);
+  console.log(`VOLO_DEV_BACKEND_URL=${backendUrl}`);
   console.log('🎉 Your app is ready at:');
-  console.log(`   Frontend:  \x1b[32mhttp://localhost:${availablePorts.frontend}\x1b[0m`);
-  console.log(`   Backend:   http://localhost:${availablePorts.backend}`);
+  console.log(`   Frontend:  \x1b[32m${frontendUrl}\x1b[0m`);
+  console.log(`   Backend:   ${backendUrl}`);
   
   if (config.useLocalFirebase) {
     console.log(`   Firebase Emulator UI:  http://localhost:${availablePorts.firebaseUI}`);
@@ -189,15 +195,18 @@ async function startServices() {
   let firebaseConfigPath = null;
 
   try {
-    // Auto-detect wrangler usage
+    // Auto-detect wrangler usage (unless --node forces Node + embedded Postgres)
     const autoDetectedWrangler = detectWranglerUsage();
-    const useWrangler = cliArgs.useWrangler || autoDetectedWrangler;
-    
-    if (autoDetectedWrangler && !cliArgs.useWrangler) {
+    const useWrangler = cliArgs.forceNode
+      ? false
+      : cliArgs.useWrangler || autoDetectedWrangler;
+
+    if (cliArgs.forceNode) {
+      console.log('🟢 Node.js mode (--node): embedded PostgreSQL enabled');
+    } else if (autoDetectedWrangler && !cliArgs.useWrangler) {
       console.log('⚡ Auto-detected Cloudflare Workers mode');
     }
-    
-    // Override CLI args with auto-detection result
+
     cliArgs.useWrangler = useWrangler;
     
     // Detect environment configuration
@@ -406,8 +415,9 @@ async function startServices() {
       const output = data.toString();
       
       if (!startupComplete) {
-        // Check for startup errors
-        if (output.includes('Error:') || output.includes('error') || output.includes('failed')) {
+        // Check for startup errors - use specific patterns to avoid false positives
+        // from benign messages like "0 errors", "No errors found", or "error_reporting"
+        if (/\b(EADDRINUSE|EACCES|MODULE_NOT_FOUND|Cannot find module|SyntaxError|TypeError|ReferenceError|Error:)\b/.test(output)) {
           clearTimeout(startupTimeout);
           console.error('❌ Error during startup:');
           console.error(output);
@@ -429,39 +439,83 @@ async function startServices() {
       }
     };
 
-    // Cleanup on exit
-    const signals = process.platform === 'win32' 
-      ? ['SIGINT', 'SIGTERM', 'SIGBREAK']
-      : ['SIGINT', 'SIGTERM'];
-    
+    let isShuttingDown = false;
+
     const killChildProcesses = () => {
-      if (child && !child.killed) {
-        if (process.platform === 'win32') {
-          // On Windows, kill the child process directly
-          child.kill('SIGKILL');
-        } else {
-          // On Unix systems, kill the entire process group
-          try {
-            // Kill the process group (negative PID)
-            process.kill(-child.pid, 'SIGKILL');
-          } catch (error) {
-            // Fallback to killing just the child process
-            child.kill('SIGKILL');
-          }
-        }
+      if (!child || child.killed) {
+        return;
       }
+
+      const forceKill = () => {
+        if (!child || child.killed) {
+          return;
+        }
+
+        if (process.platform === 'win32') {
+          child.kill('SIGKILL');
+          return;
+        }
+
+        try {
+          process.kill(-child.pid, 'SIGKILL');
+        } catch {
+          child.kill('SIGKILL');
+        }
+      };
+
+      if (process.platform === 'win32') {
+        child.kill('SIGTERM');
+        setTimeout(forceKill, 2000);
+        return;
+      }
+
+      try {
+        process.kill(-child.pid, 'SIGTERM');
+      } catch {
+        child.kill('SIGTERM');
+      }
+
+      setTimeout(forceKill, 2000);
     };
-    
-    signals.forEach(signal => {
-      process.on(signal, () => {
-        console.log(`\n🛑 Shutting down services...`);
-        cleanup();
-        killChildProcesses();
-        setTimeout(() => process.exit(0), 1000);
-      });
+
+    const shutdown = (reason = 'signal') => {
+      if (isShuttingDown) {
+        return;
+      }
+      isShuttingDown = true;
+
+      console.log(`\n🛑 Shutting down services (${reason})...`);
+      cleanup();
+      killChildProcesses();
+      setTimeout(() => process.exit(0), 2500);
+    };
+
+    const signals = process.platform === 'win32'
+      ? ['SIGINT', 'SIGTERM', 'SIGBREAK']
+      : ['SIGINT', 'SIGTERM', 'SIGHUP'];
+
+    signals.forEach((signal) => {
+      process.on(signal, () => shutdown(signal));
     });
 
+    // Background shells and CI runners often close stdin without a TTY signal.
+    // Set VOLO_DEV_IGNORE_STDIN=1 to keep services running after the parent exits.
+    const ignoreStdinClose =
+      process.env.VOLO_DEV_IGNORE_STDIN === '1' ||
+      process.env.VOLO_DEV_IGNORE_STDIN === 'true';
+
+    if (!process.stdin.isTTY && !ignoreStdinClose) {
+      process.stdin.resume();
+      const onStdinClosed = () => shutdown('stdin closed');
+      process.stdin.once('end', onStdinClosed);
+      process.stdin.once('close', onStdinClosed);
+    }
+
     child.on('exit', (code, signal) => {
+      if (isShuttingDown) {
+        return;
+      }
+      isShuttingDown = true;
       cleanup();
       if (code !== 0 && signal !== 'SIGKILL' && signal !== 'SIGTERM') {
         console.log(`\n❌ Services stopped with error code ${code}`);

@@ -4,6 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "ensure-firebase-config": "node ./scripts/ensure-firebase-config.mjs",
+    "predev": "pnpm run ensure-firebase-config",
+    "prebuild": "pnpm run ensure-firebase-config",
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
@@ -22,6 +25,9 @@
     "@radix-ui/react-tabs": "^1.1.13",
     "@radix-ui/react-tooltip": "^1.2.7",
     "@tailwindcss/vite": "^4.1.7",
+    "@tanstack/react-query": "^5.100.8",
+    "@trpc/client": "^11.17.0",
+    "@trpc/react-query": "^11.17.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "firebase": "^11.8.0",
@@ -31,7 +37,8 @@
     "react-dom": "^19.1.0",
     "react-router-dom": "^7.6.0",
     "tailwind-merge": "^3.3.0",
-    "tailwindcss": "^4.1.7"
+    "tailwindcss": "^4.1.7",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@eslint/js": "^9.25.0",

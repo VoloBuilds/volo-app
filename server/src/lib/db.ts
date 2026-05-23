@@ -4,7 +4,7 @@ import { neon } from '@neondatabase/serverless';
 import postgres from 'postgres';
 import * as schema from '../schema/users';
 
-type DatabaseConnection = ReturnType<typeof drizzle> | ReturnType<typeof createDrizzlePostgres>;
+export type DatabaseConnection = ReturnType<typeof drizzle> | ReturnType<typeof createDrizzlePostgres>;
 
 let cachedConnection: DatabaseConnection | null = null;
 let cachedConnectionString: string | null = null;
@@ -21,7 +21,7 @@ const createConnection = async (connectionString: string): Promise<DatabaseConne
 
   const client = postgres(connectionString, {
     prepare: false,
-    max: 1,
+    max: parseInt(process.env.DB_POOL_MAX ?? '10', 10),
     idle_timeout: 20,
     max_lifetime: 60 * 30,
   });

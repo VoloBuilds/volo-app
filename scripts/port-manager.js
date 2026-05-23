@@ -158,6 +158,7 @@ export function updateServerEnvWithPorts(availablePorts, useWrangler) {
     
     if (isUsingLocalFirebase) {
       const firebaseAuthLine = `FIREBASE_AUTH_EMULATOR_HOST=localhost:${availablePorts.firebaseAuth}`;
+      const useFirebaseEmulatorLine = `USE_FIREBASE_EMULATOR=true`;
       
       if (updatedContent.includes('FIREBASE_AUTH_EMULATOR_HOST=')) {
         const originalFirebaseLine = envData.content.match(/FIREBASE_AUTH_EMULATOR_HOST=.+/)?.[0];
@@ -173,8 +174,35 @@ export function updateServerEnvWithPorts(availablePorts, useWrangler) {
             modified: firebaseAuthLine
           });
         }
+
+        if (updatedContent.includes('USE_FIREBASE_EMULATOR=')) {
+          const originalUseEmulatorLine = envData.content.match(/USE_FIREBASE_EMULATOR=.+/)?.[0];
+          if (originalUseEmulatorLine && originalUseEmulatorLine !== useFirebaseEmulatorLine) {
+            updatedContent = updatedContent.replace(
+              /USE_FIREBASE_EMULATOR=.+/,
+              useFirebaseEmulatorLine
+            );
+            hasChanges = true;
+            changesTracked.modifications.push({
+              type: 'replace',
+              original: originalUseEmulatorLine,
+              modified: useFirebaseEmulatorLine
+            });
+          }
+        } else {
+          const emulatorInsert = `\n${useFirebaseEmulatorLine}`;
+          updatedContent = updatedContent.replace(
+            firebaseAuthLine,
+            `${firebaseAuthLine}${emulatorInsert}`
+          );
+          hasChanges = true;
+          changesTracked.modifications.push({
+            type: 'insert_after_emulator',
+            added: emulatorInsert
+          });
+        }
       } else {
-        const firebaseSection = `\n# Firebase Auth Emulator (dynamically set)\n${firebaseAuthLine}\n`;
+        const firebaseSection = `\n# Firebase Auth Emulator (dynamically set)\n${firebaseAuthLine}\n${useFirebaseEmulatorLine}\n`;
         updatedContent += firebaseSection;
         hasChanges = true;
         changesTracked.modifications.push({
@@ -233,6 +261,11 @@ export function restoreEnvFile(envState) {
           currentContent = currentContent.slice(0, -change.added.length);
           hasChanges = true;
         }
+      } else if (change.type === 'insert_after_emulator') {
+        if (currentContent.includes(change.added.trim())) {
+          currentContent = currentContent.replace(change.added, '');
+          hasChanges = true;
+        }
       }
     }
 
@@ -272,7 +305,7 @@ export function checkDatabaseConfiguration(useWrangler) {
       console.error('   Please create server/.dev.vars with a remote database URL.');
       return false;
     }
-    console.error('❌ No .env file found. Run `pnpm run setup:local` first to set up your database.');
+    console.error('❌ No .env file found. Run `pnpm post-setup` or `pnpm run dev` from the project root to set up embedded PostgreSQL.');
     return false;
   }
 
@@ -284,7 +317,7 @@ export function checkDatabaseConfiguration(useWrangler) {
     if (useWrangler) {
       console.error('   Please add DATABASE_URL to server/.dev.vars with a remote database.');
     } else {
-      console.error('   Run `pnpm run setup:local` to set up embedded PostgreSQL.');
+      console.error('   Run `pnpm post-setup` or `pnpm run dev` from the project root to set up embedded PostgreSQL.');
     }
     return false;
   }
@@ -376,11 +409,12 @@ export function updateWranglerConfigWithPort(availablePorts, useFirebaseEmulator
       modifications: []
     };
     
+    const newPortLine = `port = ${availablePorts.backend}`;
+
     // Check if [dev] section exists
     if (updatedContent.includes('[dev]')) {
       // Check if port is already set in [dev] section (handle comments and whitespace)
       const portLineMatch = updatedContent.match(/^port\s*=\s*\d+.*$/m);
-      const newPortLine = `port = ${availablePorts.backend}`;
       
       if (portLineMatch) {
         // Port line exists, update it
@@ -423,6 +457,7 @@ export function updateWranglerConfigWithPort(availablePorts, useFirebaseEmulator
     // Handle Firebase emulator configuration in [vars] section
     if (useFirebaseEmulator) {
       const firebaseEmulatorLine = `FIREBASE_AUTH_EMULATOR_HOST = "localhost:${availablePorts.firebaseAuth}"`;
+      const useFirebaseEmulatorLine = `USE_FIREBASE_EMULATOR = "true"`;
       
       if (updatedContent.includes('[vars]')) {
         // Check if FIREBASE_AUTH_EMULATOR_HOST already exists
@@ -441,17 +476,42 @@ export function updateWranglerConfigWithPort(availablePorts, useFirebaseEmulator
             original: originalLine,
             modified: firebaseEmulatorLine
           });
+
+          const useEmulatorMatch = updatedContent.match(/^USE_FIREBASE_EMULATOR\s*=.*/m);
+          if (useEmulatorMatch) {
+            const originalUseLine = useEmulatorMatch[0];
+            updatedContent = updatedContent.replace(
+              /^USE_FIREBASE_EMULATOR\s*=.*/m,
+              useFirebaseEmulatorLine
+            );
+            hasChanges = true;
+            changesTracked.modifications.push({
+              type: 'replace',
+              original: originalUseLine,
+              modified: useFirebaseEmulatorLine
+            });
+          } else {
+            updatedContent = updatedContent.replace(
+              firebaseEmulatorLine,
+              `${firebaseEmulatorLine}\n${useFirebaseEmulatorLine}`
+            );
+            hasChanges = true;
+            changesTracked.modifications.push({
+              type: 'insert_after_vars_emulator',
+              added: `${useFirebaseEmulatorLine}\n`
+            });
+          }
         } else {
           // Add after [vars] section
           const varsMatch = updatedContent.match(/(\[vars\](?:\r?\n(?:[^[]*)?)*)/);
           if (varsMatch) {
             const varsSection = varsMatch[1];
-            const replacement = `${varsSection}${firebaseEmulatorLine}\n`;
+            const replacement = `${varsSection}${firebaseEmulatorLine}\n${useFirebaseEmulatorLine}\n`;
             updatedContent = updatedContent.replace(varsMatch[1], replacement);
             hasChanges = true;
             changesTracked.modifications.push({
               type: 'insert_after_vars',
-              added: `${firebaseEmulatorLine}\n`
+              added: `${firebaseEmulatorLine}\n${useFirebaseEmulatorLine}\n`
             });
           }
         }
@@ -523,10 +583,21 @@ export function restoreWranglerConfig(configState) {
           hasChanges = true;
         }
       } else if (change.type === 'insert_after_vars') {
-        // Remove the Firebase emulator line we added after [vars]
+        // Remove the Firebase emulator lines we added after [vars]
         const firebaseLineRegex = /FIREBASE_AUTH_EMULATOR_HOST\s*=\s*"localhost:\d+"\n/;
+        const useEmulatorLineRegex = /USE_FIREBASE_EMULATOR\s*=\s*"true"\n/;
         if (firebaseLineRegex.test(currentContent)) {
           currentContent = currentContent.replace(firebaseLineRegex, '');
+          hasChanges = true;
+        }
+        if (useEmulatorLineRegex.test(currentContent)) {
+          currentContent = currentContent.replace(useEmulatorLineRegex, '');
+          hasChanges = true;
+        }
+      } else if (change.type === 'insert_after_vars_emulator') {
+        const useEmulatorLineRegex = /USE_FIREBASE_EMULATOR\s*=\s*"true"\n/;
+        if (useEmulatorLineRegex.test(currentContent)) {
+          currentContent = currentContent.replace(useEmulatorLineRegex, '');
           hasChanges = true;
         }
       }

@@ -3,6 +3,8 @@ main = "src/api.ts"
 compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
 
+# [vars] below work out of the box for local deploys. This file is gitignored once generated.
+# For production hardening, prefer: wrangler secret put DATABASE_URL
 [vars]
 RUNTIME = "cloudflare"
 FIREBASE_PROJECT_ID = "{{FIREBASE_PROJECT_ID}}"
@@ -12,4 +14,4 @@ DATABASE_URL = "{{DATABASE_URL}}"
 # Development tools configuration
 [dev]
 local_protocol = "http"
-port = 8787  # Will be dynamically updated by port-manager.js 
+port = 5500  # Will be dynamically updated by port-manager.js

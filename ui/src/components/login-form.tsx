@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
 import { Input } from "./ui/input"
 import { Button } from "./ui/button"
@@ -36,6 +36,10 @@ export function LoginForm() {
   // Default to "register" tab for anonymous users, "signin" for others
   const defaultTab = user?.isAnonymous ? "register" : "signin"
   const [activeTab, setActiveTab] = useState(defaultTab)
+
+  useEffect(() => {
+    setActiveTab(user?.isAnonymous ? "register" : "signin")
+  }, [user?.isAnonymous, user?.uid])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

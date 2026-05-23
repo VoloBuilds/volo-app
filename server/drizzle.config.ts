@@ -8,7 +8,7 @@ export default {
   out: './drizzle',
   driver: 'pg',
   dbCredentials: {
-    connectionString: databaseUrl || 'postgresql://postgres:password@localhost:5433/postgres',
+    connectionString: databaseUrl || 'postgresql://postgres:password@localhost:5502/postgres',
   },
   schemaFilter: ['app'],
 } satisfies Config; 

@@ -1,6 +1,6 @@
 {
   "name": "volo-app-template",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Full-stack React + Hono template with Firebase Auth, Neon DB, and Cloudflare deployment",
   "type": "module",
   "scripts": {
@@ -13,9 +13,9 @@
     "connect:database:supabase": "npx create-volo-app --connect --database supabase",
     "connect:database:custom": "npx create-volo-app --connect --database custom",
     "connect:deploy": "npx create-volo-app --connect --deploy",
-    "connection:status": "npx create-volo-app --status",
+    "connection:status": "npx create-volo-app --connect",
     "build": "cd ui && pnpm run build",
-    "deploy": "cd server && wrangler deploy && echo 'Frontend deployment: Connect your Git repo to Cloudflare Pages'"
+    "deploy": "node scripts/deploy-guard.js"
   },
   "engines": {
     "node": ">=20.0.0",

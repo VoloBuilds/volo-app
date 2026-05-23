@@ -40,12 +40,11 @@ export function getRequiredEnv(key: string): string {
 }
 
 /**
- * Check if we're in development mode
- * Works across Node.js and Cloudflare Workers
+ * Whether Firebase Auth emulator bypass is enabled.
+ * Requires explicit USE_FIREBASE_EMULATOR=true — never inferred from NODE_ENV or emulator host alone.
  */
-export function isDevelopment(): boolean {
-  return getEnv('NODE_ENV') === 'development' || 
-         getEnv('FIREBASE_AUTH_EMULATOR_HOST') !== undefined;
+export function useFirebaseEmulator(): boolean {
+  return getEnv('USE_FIREBASE_EMULATOR') === 'true';
 }
 
 /**
@@ -89,7 +88,7 @@ export function getNodeEnv() {
 /**
  * Type guard to check if we're in a Cloudflare Workers environment
  */
-export function isCloudflareEnv(source: EnvLike): boolean {
+export function isCloudflareEnv(_source: EnvLike): boolean {
   // In Cloudflare Workers, process.env is not available or is empty
   return typeof process === 'undefined' || Object.keys(process.env).length === 0;
 } 
