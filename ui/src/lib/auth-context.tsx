@@ -111,9 +111,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setIsLoggedOut(false);
         }
         
-        // Fetch server profile for signed-in users (non-anonymous with email).
-        // Anonymous sessions skip the server profile until a real sign-in provider is used.
-        if (!user.isAnonymous && user.email && !isLoggedOut && isActive) {
+        // Upsert and load server profile for any Firebase session (including anonymous).
+        if (!isLoggedOut && isActive) {
           void fetchUserProfile();
         } else if (isActive) {
           setUserProfile(null);
