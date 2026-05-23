@@ -1,6 +1,6 @@
 {
   "name": "volo-app-template",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Full-stack React + Hono template with Firebase Auth, Neon DB, and Cloudflare deployment",
   "type": "module",
   "scripts": {
@@ -15,7 +15,7 @@
     "connect:deploy": "npx create-volo-app --connect --deploy",
     "connection:status": "npx create-volo-app --connect",
     "build": "cd ui && pnpm run build",
-    "deploy": "cd server && pnpm run deploy && cd ../ui && pnpm run deploy"
+    "deploy": "pnpm --filter server run deploy && pnpm --filter ui run deploy"
   },
   "engines": {
     "node": ">=20.0.0",

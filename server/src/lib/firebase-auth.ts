@@ -1,10 +1,23 @@
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 import { isDevelopment, getEnv } from './env';
 
-type FirebaseUser = {
+export type FirebaseUser = {
   id: string;
   email: string | undefined;
+  display_name: string | null;
+  photo_url: string | null;
 };
+
+function optionalStringClaim(value: unknown): string | null {
+  return typeof value === 'string' && value.length > 0 ? value : null;
+}
+
+function profileFromTokenPayload(payload: Record<string, unknown>): Pick<FirebaseUser, 'display_name' | 'photo_url'> {
+  return {
+    display_name: optionalStringClaim(payload.name),
+    photo_url: optionalStringClaim(payload.picture),
+  };
+}
 
 const getJWKS = () => {
   if (isDevelopment()) {
@@ -49,6 +62,7 @@ export async function verifyFirebaseToken(token: string, projectId: string): Pro
       return {
         id: payload.sub as string,
         email: payload.email as string | undefined,
+        ...profileFromTokenPayload(payload as Record<string, unknown>),
       };
     } catch (error) {
       throw new Error('Invalid emulator token');
@@ -68,6 +82,7 @@ export async function verifyFirebaseToken(token: string, projectId: string): Pro
     return {
       id: payload.sub as string,
       email: payload.email as string | undefined,
+      ...profileFromTokenPayload(payload as Record<string, unknown>),
     };
   } catch (error) {
     throw new Error('Invalid token');

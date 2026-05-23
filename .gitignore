@@ -19,6 +19,7 @@ build
 # Generated configuration files (created by CLI setup)
 ui/src/lib/firebase-config.json
 server/.dev.vars
+volo-config.json
 
 # Editor directories and files
 .vscode/*

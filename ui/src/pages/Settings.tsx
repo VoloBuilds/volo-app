@@ -9,25 +9,18 @@ import { Separator } from '@/components/ui/separator';
 import { User } from 'lucide-react';
 
 export function Settings() {
-  const { user } = useAuth();
-  const utils = trpc.useUtils();
-  const { data: me, isPending: meLoading } = trpc.user.me.useQuery();
+  const { user, userProfile, profileLoading, forceRefresh } = useAuth();
   const [displayName, setDisplayName] = useState('');
-  const [email, setEmail] = useState(user?.email || '');
 
   useEffect(() => {
-    if (me) {
-      setDisplayName(me.display_name ?? '');
+    if (userProfile) {
+      setDisplayName(userProfile.display_name ?? '');
     }
-  }, [me]);
-
-  useEffect(() => {
-    setEmail(user?.email || '');
-  }, [user?.email, user?.uid]);
+  }, [userProfile]);
 
   const updateMutation = trpc.user.update.useMutation({
     onSuccess: () => {
-      void utils.user.me.invalidate();
+      forceRefresh();
     },
   });
 
@@ -59,7 +52,7 @@ export function Settings() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {meLoading ? (
+            {profileLoading ? (
               <p className="text-sm text-muted-foreground">Loading profile…</p>
             ) : null}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -77,10 +70,14 @@ export function Settings() {
                 <Input
                   id="email"
                   type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your email"
+                  value={user?.email ?? ''}
+                  readOnly
+                  disabled
+                  className="bg-muted"
                 />
+                <p className="text-xs text-muted-foreground">
+                  Email is managed by your sign-in provider and cannot be changed here.
+                </p>
               </div>
             </div>
           </CardContent>
@@ -94,7 +91,7 @@ export function Settings() {
           ) : null}
           <Button
             onClick={() => void handleSave()}
-            disabled={updateMutation.isPending || meLoading}
+            disabled={updateMutation.isPending || profileLoading}
             className="w-full md:w-auto"
           >
             {updateMutation.isPending ? 'Saving...' : 'Save Changes'}

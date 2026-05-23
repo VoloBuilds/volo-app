@@ -126,9 +126,13 @@ function handleError(error, message = 'Failed to start services') {
 }
 
 function showServiceInfo(availablePorts, useWrangler, config) {
+  const frontendUrl = `http://localhost:${availablePorts.frontend}`;
+  const backendUrl = `http://localhost:${availablePorts.backend}`;
+  console.log(`VOLO_DEV_FRONTEND_URL=${frontendUrl}`);
+  console.log(`VOLO_DEV_BACKEND_URL=${backendUrl}`);
   console.log('🎉 Your app is ready at:');
-  console.log(`   Frontend:  \x1b[32mhttp://localhost:${availablePorts.frontend}\x1b[0m`);
-  console.log(`   Backend:   http://localhost:${availablePorts.backend}`);
+  console.log(`   Frontend:  \x1b[32m${frontendUrl}\x1b[0m`);
+  console.log(`   Backend:   ${backendUrl}`);
   
   if (config.useLocalFirebase) {
     console.log(`   Firebase Emulator UI:  http://localhost:${availablePorts.firebaseUI}`);

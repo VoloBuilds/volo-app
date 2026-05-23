@@ -1,6 +1,6 @@
 import { verifyFirebaseToken } from './firebase-auth';
 import { getDatabase } from './db';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { users, type User } from '../schema/users';
 import type { DatabaseConnection } from './db';
 import { getFirebaseProjectId, getDatabaseUrl, getAllowAnonymousUsers } from './env';
@@ -27,19 +27,23 @@ export async function upsertUserFromIdToken(
 
   const firebaseUserId = firebaseUser.id;
   const email = firebaseUser.email || null;
+  const displayName = firebaseUser.display_name;
+  const photoUrl = firebaseUser.photo_url;
 
   await db
     .insert(users)
     .values({
       id: firebaseUserId,
       email,
-      display_name: null,
-      photo_url: null,
+      display_name: displayName,
+      photo_url: photoUrl,
     })
     .onConflictDoUpdate({
       target: users.id,
       set: {
         email,
+        photo_url: photoUrl,
+        display_name: sql`COALESCE(${users.display_name}, excluded.display_name)`,
         updated_at: new Date(),
       },
     });
